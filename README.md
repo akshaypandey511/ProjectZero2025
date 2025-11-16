@@ -2,6 +2,21 @@
 
 A web application for learning German A1 vocabulary with interactive flashcards. Track your progress and master essential German words!
 
+---
+
+## 🆕 New to Coding? Start Here!
+
+**👉 [GETTING_STARTED.md](GETTING_STARTED.md) - Complete beginner-friendly guide with download links and step-by-step instructions**
+
+This guide includes:
+- All download links for required software
+- Simple step-by-step instructions
+- Screenshots and examples
+- Troubleshooting help
+- Video tutorial links
+
+---
+
 ## Features
 
 - **User Authentication** - Secure registration and login
