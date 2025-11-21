@@ -57,11 +57,11 @@ export default function QuizSelection() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-14">
-          <div className="inline-block px-5 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold tracking-wide mb-6">
+          <div className="inline-block px-5 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-sm font-semibold tracking-wide mb-6 shadow-lg">
             Test Your Knowledge
           </div>
-          <h2 className="text-5xl font-extrabold text-gray-900 mb-5">Choose Your Quiz</h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <h2 className="text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-5">Choose Your Quiz</h2>
+          <p className="text-xl text-gray-700 max-w-2xl mx-auto leading-relaxed">
             Each quiz contains 10 questions. Test your German knowledge and track your progress!
           </p>
         </div>
@@ -71,7 +71,7 @@ export default function QuizSelection() {
             <button
               key={category.id}
               onClick={() => handleQuizSelect(category.id)}
-              className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-left border border-gray-100 group"
+              className="bg-gradient-to-br from-white via-blue-50 to-indigo-100 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-left border-2 border-blue-200 hover:border-blue-400 group"
             >
               <div className="text-5xl mb-5 transform group-hover:scale-110 transition-transform duration-300">{category.icon}</div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">{category.name}</h3>

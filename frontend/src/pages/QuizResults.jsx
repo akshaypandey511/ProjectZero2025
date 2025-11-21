@@ -56,41 +56,41 @@ export default function QuizResults() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Score Card */}
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl p-12 mb-10 text-center border border-gray-100">
-          <div className="inline-block px-6 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold tracking-wide mb-6">
+        <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 rounded-3xl shadow-2xl p-12 mb-10 text-center border-2 border-blue-200">
+          <div className="inline-block px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-sm font-semibold tracking-wide mb-6 shadow-lg">
             Results
           </div>
-          <h1 className="text-5xl font-extrabold text-gray-900 mb-8">Quiz Complete!</h1>
+          <h1 className="text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-8">Quiz Complete!</h1>
 
           <div className={`text-8xl font-extrabold mb-6 ${getScoreColor()}`}>
             {percentage}%
           </div>
 
-          <p className="text-3xl font-bold text-gray-700 mb-4">
+          <p className="text-3xl font-bold text-gray-800 mb-4">
             {getScoreMessage()}
           </p>
 
-          <p className="text-xl text-gray-600 mb-10 leading-relaxed">
-            You got <span className="font-bold text-indigo-600">{correctCount}</span> out of <span className="font-bold text-indigo-600">{totalQuestions}</span> questions correct
+          <p className="text-xl text-gray-700 mb-10 leading-relaxed">
+            You got <span className="font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{correctCount}</span> out of <span className="font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{totalQuestions}</span> questions correct
           </p>
 
           {/* Action Buttons */}
           <div className="flex flex-wrap justify-center gap-5">
             <button
               onClick={handleRetakeQuiz}
-              className="px-8 py-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               Retake Quiz
             </button>
             <button
               onClick={handleNewQuiz}
-              className="px-8 py-4 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               Choose Different Quiz
             </button>
             <button
               onClick={handleDashboard}
-              className="px-8 py-4 bg-white border-2 border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50 hover:border-indigo-300 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              className="px-8 py-4 bg-gradient-to-br from-white to-blue-50 border-2 border-blue-300 text-blue-700 rounded-xl hover:from-blue-100 hover:to-indigo-100 hover:border-blue-400 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
             >
               Back to Dashboard
             </button>
@@ -98,8 +98,8 @@ export default function QuizResults() {
         </div>
 
         {/* Detailed Results */}
-        <div className="bg-white rounded-2xl shadow-2xl p-10 border border-gray-100">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-8">Review Your Answers</h2>
+        <div className="bg-gradient-to-br from-white via-blue-50 to-indigo-100 rounded-2xl shadow-2xl p-10 border-2 border-blue-200">
+          <h2 className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-8">Review Your Answers</h2>
 
           <div className="space-y-4">
             {answers.map((answer, index) => (

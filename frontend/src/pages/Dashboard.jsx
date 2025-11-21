@@ -115,7 +115,7 @@ export default function Dashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-10">
-          <h2 className="text-2xl font-bold text-gray-900 mb-5">Choose a category</h2>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-5">Choose a category</h2>
           <div className="flex flex-wrap gap-3">
             {categories.map((category) => (
               <button
@@ -123,8 +123,8 @@ export default function Dashboard() {
                 onClick={() => setSelectedCategory(category)}
                 className={`px-7 py-3 rounded-xl font-semibold transition-all duration-200 ${
                   selectedCategory === category
-                    ? 'bg-indigo-600 text-white shadow-lg transform scale-105'
-                    : 'bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 shadow-md hover:shadow-lg transform hover:-translate-y-0.5'
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gradient-to-br from-white to-blue-50 text-blue-700 hover:from-blue-100 hover:to-indigo-100 border-2 border-blue-200 hover:border-blue-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5'
                 }`}
               >
                 {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -134,9 +134,9 @@ export default function Dashboard() {
         </div>
 
         <div className="mb-6 text-center">
-          <div className="inline-block px-6 py-2 bg-white rounded-full shadow-md border border-gray-100">
-            <p className="text-gray-700 font-semibold">
-              Card <span className="text-indigo-600">{currentIndex + 1}</span> of <span className="text-indigo-600">{words.length}</span>
+          <div className="inline-block px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full shadow-lg border-2 border-blue-300">
+            <p className="text-white font-semibold">
+              Card <span className="font-extrabold">{currentIndex + 1}</span> of <span className="font-extrabold">{words.length}</span>
             </p>
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function Dashboard() {
                 className={`flex items-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all duration-200 ${
                   currentIndex === 0
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-gray-700 hover:bg-gray-50 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+                    : 'bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 border-2 border-blue-300 hover:from-blue-200 hover:to-indigo-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@ export default function Dashboard() {
 
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 Next
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
