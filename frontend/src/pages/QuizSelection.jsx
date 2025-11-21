@@ -73,14 +73,12 @@ export default function QuizSelection() {
               onClick={() => handleQuizSelect(category.id)}
               className="bg-gradient-to-br from-white via-blue-50 to-indigo-100 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-left border-2 border-blue-200 hover:border-blue-400 group"
             >
-              <div className="text-5xl mb-5 transform group-hover:scale-110 transition-transform duration-300">{category.icon}</div>
+              <div className="text-4xl mb-5 transform group-hover:scale-110 transition-transform duration-300">{category.icon}</div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">{category.name}</h3>
               <p className="text-gray-600 leading-relaxed mb-5">{category.description}</p>
               <div className="flex items-center text-indigo-600 font-semibold group-hover:text-indigo-700 transition-colors">
                 Start Quiz
-                <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <span className="ml-2 text-xl transform group-hover:translate-x-1 transition-transform">🐱</span>
               </div>
             </button>
           ))}
