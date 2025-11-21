@@ -4,6 +4,9 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import QuizSelection from './pages/QuizSelection';
+import Quiz from './pages/Quiz';
+import QuizResults from './pages/QuizResults';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -32,6 +35,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/quiz"
+            element={
+              <ProtectedRoute>
+                <QuizSelection />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/quiz/:category"
+            element={
+              <ProtectedRoute>
+                <Quiz />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/quiz/results"
+            element={
+              <ProtectedRoute>
+                <QuizResults />
               </ProtectedRoute>
             }
           />

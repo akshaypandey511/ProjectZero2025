@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [activeTab, setActiveTab] = useState('flashcards');
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -83,6 +84,32 @@ export default function Dashboard() {
           >
             Logout
           </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('flashcards')}
+              className={`px-8 py-3 font-medium transition-colors ${
+                activeTab === 'flashcards'
+                  ? 'border-b-2 border-indigo-600 text-indigo-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Flashcards
+            </button>
+            <button
+              onClick={() => navigate('/quiz')}
+              className={`px-8 py-3 font-medium transition-colors ${
+                activeTab === 'quiz'
+                  ? 'border-b-2 border-indigo-600 text-indigo-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Quiz
+            </button>
+          </div>
         </div>
       </nav>
 

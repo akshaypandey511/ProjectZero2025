@@ -1,0 +1,152 @@
+import { useLocation, useNavigate } from 'react-router-dom';
+
+export default function QuizResults() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { answers, category } = location.state || { answers: [], category: 'all' };
+
+  const correctCount = answers.filter(a => a.isCorrect).length;
+  const totalQuestions = answers.length;
+  const percentage = Math.round((correctCount / totalQuestions) * 100);
+
+  const getScoreMessage = () => {
+    if (percentage === 100) return 'Perfect! 🎉';
+    if (percentage >= 80) return 'Excellent! 🌟';
+    if (percentage >= 60) return 'Good job! 👍';
+    if (percentage >= 40) return 'Keep practicing! 💪';
+    return 'Need more practice! 📚';
+  };
+
+  const getScoreColor = () => {
+    if (percentage >= 80) return 'text-green-600';
+    if (percentage >= 60) return 'text-blue-600';
+    if (percentage >= 40) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const handleRetakeQuiz = () => {
+    navigate(`/quiz/${category}`);
+  };
+
+  const handleNewQuiz = () => {
+    navigate('/quiz');
+  };
+
+  const handleDashboard = () => {
+    navigate('/dashboard');
+  };
+
+  if (answers.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+          <p className="text-xl text-gray-600 mb-4">No quiz results found.</p>
+          <button
+            onClick={handleNewQuiz}
+            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            Take a Quiz
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Score Card */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8 text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Quiz Complete!</h1>
+
+          <div className={`text-6xl font-bold mb-4 ${getScoreColor()}`}>
+            {percentage}%
+          </div>
+
+          <p className="text-2xl font-semibold text-gray-700 mb-2">
+            {getScoreMessage()}
+          </p>
+
+          <p className="text-lg text-gray-600 mb-8">
+            You got {correctCount} out of {totalQuestions} questions correct
+          </p>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap justify-center gap-4">
+            <button
+              onClick={handleRetakeQuiz}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+            >
+              Retake Quiz
+            </button>
+            <button
+              onClick={handleNewQuiz}
+              className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+            >
+              Choose Different Quiz
+            </button>
+            <button
+              onClick={handleDashboard}
+              className="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+
+        {/* Detailed Results */}
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Review Your Answers</h2>
+
+          <div className="space-y-4">
+            {answers.map((answer, index) => (
+              <div
+                key={index}
+                className={`p-4 rounded-lg border-2 ${
+                  answer.isCorrect
+                    ? 'border-green-200 bg-green-50'
+                    : 'border-red-200 bg-red-50'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-gray-900">
+                    Question {index + 1}: {answer.question.question}
+                  </h3>
+                  {answer.isCorrect ? (
+                    <svg className="w-6 h-6 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="w-6 h-6 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+
+                <div className="ml-4 space-y-1">
+                  <p className="text-sm">
+                    <span className="font-medium">Your answer:</span>{' '}
+                    <span className={answer.isCorrect ? 'text-green-700' : 'text-red-700'}>
+                      {answer.selectedAnswer}
+                    </span>
+                  </p>
+                  {!answer.isCorrect && (
+                    <p className="text-sm">
+                      <span className="font-medium">Correct answer:</span>{' '}
+                      <span className="text-green-700">{answer.question.correctAnswer}</span>
+                    </p>
+                  )}
+                  {answer.question.word.exampleSentence && (
+                    <p className="text-sm text-gray-600 italic mt-2">
+                      Example: {answer.question.word.exampleSentence}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
