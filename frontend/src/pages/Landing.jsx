@@ -51,7 +51,7 @@ export default function Landing() {
 
           <div className="mt-28 grid md:grid-cols-3 gap-8">
             <div className="bg-white p-10 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
-              <div className="text-4xl mb-5">📚</div>
+              <div className="text-5xl mb-5">📚</div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">100+ Words</h3>
               <p className="text-gray-600 leading-relaxed">
                 Learn essential German A1 vocabulary with examples, pronunciations, and articles
@@ -59,7 +59,7 @@ export default function Landing() {
             </div>
 
             <div className="bg-white p-10 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
-              <div className="text-4xl mb-5">🎯</div>
+              <div className="text-5xl mb-5">🎯</div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">Quiz Yourself</h3>
               <p className="text-gray-600 leading-relaxed">
                 Test your knowledge with interactive quizzes across multiple categories
@@ -67,7 +67,7 @@ export default function Landing() {
             </div>
 
             <div className="bg-white p-10 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
-              <div className="text-4xl mb-5">⚡</div>
+              <div className="text-5xl mb-5">⚡</div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">Track Progress</h3>
               <p className="text-gray-600 leading-relaxed">
                 Monitor your learning journey and see your improvement over time
