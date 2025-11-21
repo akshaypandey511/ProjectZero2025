@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import QuizSelection from './pages/QuizSelection';
 import Quiz from './pages/Quiz';
 import QuizResults from './pages/QuizResults';
+import ProgressChart from './pages/ProgressChart';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -59,6 +60,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <QuizResults />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/progress"
+            element={
+              <ProtectedRoute>
+                <ProgressChart />
               </ProtectedRoute>
             }
           />

@@ -109,6 +109,12 @@ export default function Dashboard() {
             >
               🎯 Quiz
             </button>
+            <button
+              onClick={() => navigate('/progress')}
+              className="px-10 py-4 font-semibold transition-all duration-200 text-gray-600 hover:text-gray-900 hover:border-b-3 hover:border-gray-300"
+            >
+              📊 Progress Chart
+            </button>
           </div>
         </div>
       </nav>

@@ -38,18 +38,33 @@ export default function QuizSelection() {
             <h1 className="text-3xl font-bold text-gray-900">German Learning App</h1>
             <p className="text-base text-gray-600 mt-1">Welcome, <span className="font-semibold text-indigo-600">{user?.name}</span>!</p>
           </div>
-          <div className="flex gap-3">
+          <button
+            onClick={handleLogout}
+            className="px-6 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+          >
+            Logout
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex border-b border-gray-200">
             <button
-              onClick={handleBack}
-              className="px-6 py-2.5 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              onClick={() => navigate('/dashboard')}
+              className="px-10 py-4 font-semibold transition-all duration-200 text-gray-600 hover:text-gray-900 hover:border-b-3 hover:border-gray-300"
             >
-              Back to Dashboard
+              📚 Flashcards
             </button>
             <button
-              onClick={handleLogout}
-              className="px-6 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              className="px-10 py-4 font-semibold transition-all duration-200 border-b-3 border-indigo-600 text-indigo-600"
             >
-              Logout
+              🎯 Quiz
+            </button>
+            <button
+              onClick={() => navigate('/progress')}
+              className="px-10 py-4 font-semibold transition-all duration-200 text-gray-600 hover:text-gray-900 hover:border-b-3 hover:border-gray-300"
+            >
+              📊 Progress Chart
             </button>
           </div>
         </div>
