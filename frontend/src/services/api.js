@@ -35,6 +35,7 @@ export const vocabularyAPI = {
   getRandom: (params) => api.get('/vocabulary/random', { params }),
   updateProgress: (data) => api.post('/vocabulary/progress', data),
   getProgress: () => api.get('/vocabulary/progress'),
+  getStats: () => api.get('/vocabulary/stats'),
 };
 
 export default api;

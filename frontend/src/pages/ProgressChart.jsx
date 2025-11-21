@@ -7,7 +7,7 @@ export default function ProgressChart() {
   const [progressData, setProgressData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    totalWords: 100,
+    totalWords: 0,
     learnedWords: 0,
     percentage: 0,
     needPractice: 0,
@@ -23,8 +23,15 @@ export default function ProgressChart() {
   const loadProgress = async () => {
     try {
       setLoading(true);
-      const response = await vocabularyAPI.getProgress();
-      const progress = response.data.data;
+
+      // Fetch both progress and total word count
+      const [progressResponse, statsResponse] = await Promise.all([
+        vocabularyAPI.getProgress(),
+        vocabularyAPI.getStats()
+      ]);
+
+      const progress = progressResponse.data.data;
+      const totalWords = statsResponse.data.data.totalWords;
       setProgressData(progress);
 
       // Calculate statistics
@@ -34,10 +41,10 @@ export default function ProgressChart() {
       const mastered = progress.filter(p => p.masteryLevel >= 3).length;
       // Words with masteryLevel 1-2 need more practice
       const needPractice = progress.filter(p => p.masteryLevel > 0 && p.masteryLevel < 3).length;
-      const percentage = Math.round((learnedWords / 100) * 100);
+      const percentage = totalWords > 0 ? Math.round((learnedWords / totalWords) * 100) : 0;
 
       setStats({
-        totalWords: 100,
+        totalWords,
         learnedWords,
         percentage,
         needPractice,
@@ -199,13 +206,13 @@ export default function ProgressChart() {
           {stats.percentage >= 75 && stats.percentage < 100 && (
             <div>
               <p className="text-2xl font-bold text-gray-800 mb-3">🏆 Almost there!</p>
-              <p className="text-gray-600 mb-6">You're so close to mastering all 100 words!</p>
+              <p className="text-gray-600 mb-6">You're so close to mastering all {stats.totalWords} words!</p>
             </div>
           )}
           {stats.percentage === 100 && (
             <div>
               <p className="text-2xl font-bold text-gray-800 mb-3">🎉 Congratulations!</p>
-              <p className="text-gray-600 mb-6">You've practiced all 100 words! Keep reviewing to maintain mastery.</p>
+              <p className="text-gray-600 mb-6">You've practiced all {stats.totalWords} words! Keep reviewing to maintain mastery.</p>
             </div>
           )}
 

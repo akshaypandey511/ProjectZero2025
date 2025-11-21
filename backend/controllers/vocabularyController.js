@@ -97,3 +97,15 @@ exports.getProgress = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+// @desc    Get vocabulary statistics
+// @route   GET /api/vocabulary/stats
+exports.getStats = async (req, res) => {
+  try {
+    const totalWords = await Vocabulary.countDocuments();
+    res.json({ success: true, data: { totalWords } });
+  } catch (error) {
+    console.error('Get stats error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};

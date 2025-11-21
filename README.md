@@ -22,8 +22,8 @@ This guide includes:
 - **User Authentication** - Secure registration and login
 - **Vocabulary Flashcards** - Interactive flashcards with German words, English translations, and pronunciations
 - **Progress Tracking** - Track which words you've mastered
-- **Category-based Learning** - Study by categories (greetings, numbers, colors, family, food, verbs)
-- **A1 Level Content** - 45+ essential German A1 vocabulary words
+- **Category-based Learning** - Study by categories (greetings, numbers, colors, family, food, verbs, and more)
+- **Comprehensive Content** - 1000 German vocabulary words across 23 categories
 
 ## Tech Stack
 
@@ -100,7 +100,7 @@ You should see output like:
 ```
 MongoDB connected successfully
 Cleared existing vocabulary
-Added 45 vocabulary words
+Added 1000 vocabulary words
 ```
 
 ## Running the Application
@@ -173,6 +173,7 @@ ProjectZero2025/
 
 ### Vocabulary
 - `GET /api/vocabulary` - Get all vocabulary
+- `GET /api/vocabulary/stats` - Get vocabulary statistics (total word count)
 - `GET /api/vocabulary/category/:category` - Get by category
 - `GET /api/vocabulary/random` - Get random vocabulary for practice
 - `POST /api/vocabulary/progress` - Update user progress (protected)
