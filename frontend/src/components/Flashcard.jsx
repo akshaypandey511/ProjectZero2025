@@ -32,7 +32,7 @@ export default function Flashcard({ word, onNext, onMastery }) {
             </span>
           </div>
 
-          <div className="text-6xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-8 leading-tight">
+          <div className="text-6xl font-extrabold text-indigo-700 mb-8 leading-tight">
             {flipped ? word.english : word.german}
           </div>
 
