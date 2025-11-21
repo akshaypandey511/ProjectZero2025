@@ -160,9 +160,9 @@ export default function Quiz() {
   const isCorrect = selectedAnswer === currentQ.correctAnswer;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-      <div className="max-w-3xl mx-auto px-4">
-        <div className="bg-white rounded-xl shadow-lg p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-10">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-2xl shadow-2xl p-10 border border-gray-100">
           {/* Progress Bar */}
           <div className="mb-6">
             <div className="flex justify-between text-sm text-gray-600 mb-2">
@@ -178,7 +178,7 @@ export default function Quiz() {
           </div>
 
           {/* Question */}
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">
+          <h2 className="text-3xl font-extrabold text-gray-900 mb-10 leading-tight">
             {currentQ.question}
           </h2>
 
