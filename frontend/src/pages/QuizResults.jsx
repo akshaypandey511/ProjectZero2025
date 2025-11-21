@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { vocabularyAPI } from '../services/api';
 
 export default function QuizResults() {
   const location = useLocation();
@@ -8,6 +10,30 @@ export default function QuizResults() {
   const correctCount = answers.filter(a => a.isCorrect).length;
   const totalQuestions = answers.length;
   const percentage = Math.round((correctCount / totalQuestions) * 100);
+
+  // Update progress for all quiz answers
+  useEffect(() => {
+    const updateProgress = async () => {
+      try {
+        // Update progress for each answer
+        for (const answer of answers) {
+          const vocabularyId = answer.question.word._id;
+          // Set mastery level based on whether answer was correct
+          // Correct answers get mastery level 4, incorrect get level 2
+          const masteryLevel = answer.isCorrect ? 4 : 2;
+
+          await vocabularyAPI.updateProgress({ vocabularyId, masteryLevel });
+        }
+        console.log('Progress updated successfully for quiz');
+      } catch (error) {
+        console.error('Error updating progress:', error);
+      }
+    };
+
+    if (answers.length > 0) {
+      updateProgress();
+    }
+  }, [answers]);
 
   const getScoreMessage = () => {
     if (percentage === 100) return 'Perfect! 🎉';
