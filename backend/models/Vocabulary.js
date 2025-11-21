@@ -12,7 +12,12 @@ const vocabularySchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['greetings', 'numbers', 'colors', 'family', 'food', 'animals', 'body', 'clothing', 'house', 'verbs', 'adjectives', 'time', 'places'],
+    enum: ['greetings', 'numbers', 'colors', 'family', 'food', 'animals', 'body', 'clothing', 'house', 'verbs', 'adjectives', 'time', 'places', 'articles'],
+  },
+  article: {
+    type: String,
+    enum: ['der', 'die', 'das', null],
+    default: null,
   },
   level: {
     type: String,
