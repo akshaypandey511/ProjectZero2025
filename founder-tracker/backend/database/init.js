@@ -1,17 +1,17 @@
-const Database = require('better-sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 // Create database file in the backend directory
 const dbPath = path.join(__dirname, 'founder-tracker.db');
-const db = new Database(dbPath);
+const db = new sqlite3.Database(dbPath);
 
 console.log('Initializing Founder Growth Tracker database...');
 
 // Enable foreign keys
-db.pragma('foreign_keys = ON');
+db.run('PRAGMA foreign_keys = ON');
 
 // Create tables
-db.exec(`
+const createTablesSQL = `
   -- Reflections table (for Diagnose section)
   CREATE TABLE IF NOT EXISTS reflections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,69 +106,74 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_daily_date ON daily_habits(date);
   CREATE INDEX IF NOT EXISTS idx_problems_type ON problem_signals(signal_type);
   CREATE INDEX IF NOT EXISTS idx_milestones_phase ON milestones(phase_number);
-`);
+`;
 
-console.log('✓ Database tables created successfully');
-
-// Insert default skills
-const insertSkill = db.prepare(`
-  INSERT OR IGNORE INTO skills (skill_name, skill_category, description, current_level, target_level)
-  VALUES (?, ?, ?, ?, ?)
-`);
-
-const defaultSkills = [
-  ['Programming (Python/JS)', 'technical', 'Build scripts, automate, create MVPs. Python for backend/AI, JavaScript for web.', 20, 70],
-  ['AI/ML Literacy', 'technical', 'Understand what\'s possible. Use AI tools effectively. Know when to build vs. buy.', 30, 70],
-  ['System Design', 'technical', 'How do systems scale? Databases, APIs, cloud architecture basics.', 25, 60],
-  ['Data & Analytics', 'technical', 'SQL, basic statistics, reading dashboards, A/B testing intuition.', 50, 80],
-  ['Product Craft', 'product', 'Discovery, validation, experimentation, user research, metrics.', 60, 90],
-  ['Business Fundamentals', 'business', 'Unit economics, pricing, GTM, fundraising basics, financial modeling.', 45, 80]
-];
-
-const insertMany = db.transaction((skills) => {
-  for (const skill of skills) {
-    insertSkill.run(...skill);
+db.exec(createTablesSQL, (err) => {
+  if (err) {
+    console.error('Error creating tables:', err);
+    process.exit(1);
   }
+
+  console.log('✓ Database tables created successfully');
+
+  // Insert default skills
+  const defaultSkills = [
+    ['Programming (Python/JS)', 'technical', 'Build scripts, automate, create MVPs. Python for backend/AI, JavaScript for web.', 20, 70],
+    ['AI/ML Literacy', 'technical', 'Understand what\'s possible. Use AI tools effectively. Know when to build vs. buy.', 30, 70],
+    ['System Design', 'technical', 'How do systems scale? Databases, APIs, cloud architecture basics.', 25, 60],
+    ['Data & Analytics', 'technical', 'SQL, basic statistics, reading dashboards, A/B testing intuition.', 50, 80],
+    ['Product Craft', 'product', 'Discovery, validation, experimentation, user research, metrics.', 60, 90],
+    ['Business Fundamentals', 'business', 'Unit economics, pricing, GTM, fundraising basics, financial modeling.', 45, 80]
+  ];
+
+  const insertSkill = db.prepare('INSERT OR IGNORE INTO skills (skill_name, skill_category, description, current_level, target_level) VALUES (?, ?, ?, ?, ?)');
+
+  defaultSkills.forEach((skill) => {
+    insertSkill.run(skill, (err) => {
+      if (err) console.error('Error inserting skill:', err);
+    });
+  });
+
+  insertSkill.finalize(() => {
+    console.log('✓ Default skills inserted');
+
+    // Insert default roadmap phases
+    const defaultMilestones = [
+      ['Foundation', 1, 'Complete coding fundamentals', 'Complete one structured coding course (CS50P or Odin Project foundations)', null],
+      ['Foundation', 1, 'Build 3 small tools', 'Build 3 small personal tools/automations', null],
+      ['Foundation', 1, 'Start problem journal', 'Note frustrations and problems weekly', null],
+      ['Foundation', 1, 'Read foundational books', 'Read: Inspired, Mom Test, Zero to One', null],
+      ['Acceleration', 2, 'Build portfolio MVP', 'Build one "portfolio MVP" — a real tool that solves a real problem', null],
+      ['Acceleration', 2, 'Complete AI/ML course', 'Complete AI/ML literacy course (fast.ai Part 1)', null],
+      ['Acceleration', 2, 'Conduct user interviews', 'Do 20+ user interviews across 2-3 problem areas', null],
+      ['Acceleration', 2, 'Start writing publicly', 'Write about learnings on LinkedIn/blog', null],
+      ['Pre-Launch', 3, 'Pick ONE problem area', 'Go deep on one specific problem to solve', null],
+      ['Pre-Launch', 3, 'Run validation experiments', 'Run 2-3 validation experiments (landing pages, manual services)', null],
+      ['Pre-Launch', 3, 'Build industry network', 'Attend events, contribute to communities', null],
+      ['Pre-Launch', 3, 'Side project milestone', 'Consider: side project with paying users? Co-founder search?', null],
+      ['Launch Ready', 4, 'Validate problem-solution fit', 'Have validated problem + solution hypothesis', null],
+      ['Launch Ready', 4, 'Achieve financial runway', 'Have runway (FIRE goal achieved or close)', null],
+      ['Launch Ready', 4, 'Get paying customers/LOIs', 'Ideally: paying customers or strong LOIs', null],
+      ['Launch Ready', 4, 'Make launch decision', 'Decision: bootstrap vs. raise? India-first or global?', null]
+    ];
+
+    const insertMilestone = db.prepare('INSERT OR IGNORE INTO milestones (phase, phase_number, title, description, target_date) VALUES (?, ?, ?, ?, ?)');
+
+    defaultMilestones.forEach((milestone) => {
+      insertMilestone.run(milestone, (err) => {
+        if (err) console.error('Error inserting milestone:', err);
+      });
+    });
+
+    insertMilestone.finalize(() => {
+      console.log('✓ Default roadmap milestones inserted');
+      console.log('\n🎉 Database initialized successfully!');
+      console.log(`📁 Database location: ${dbPath}\n`);
+
+      db.close((err) => {
+        if (err) console.error('Error closing database:', err);
+        process.exit(0);
+      });
+    });
+  });
 });
-
-insertMany(defaultSkills);
-console.log('✓ Default skills inserted');
-
-// Insert default roadmap phases
-const insertMilestone = db.prepare(`
-  INSERT OR IGNORE INTO milestones (phase, phase_number, title, description, target_date)
-  VALUES (?, ?, ?, ?, ?)
-`);
-
-const defaultMilestones = [
-  ['Foundation', 1, 'Complete coding fundamentals', 'Complete one structured coding course (CS50P or Odin Project foundations)', null],
-  ['Foundation', 1, 'Build 3 small tools', 'Build 3 small personal tools/automations', null],
-  ['Foundation', 1, 'Start problem journal', 'Note frustrations and problems weekly', null],
-  ['Foundation', 1, 'Read foundational books', 'Read: Inspired, Mom Test, Zero to One', null],
-  ['Acceleration', 2, 'Build portfolio MVP', 'Build one "portfolio MVP" — a real tool that solves a real problem', null],
-  ['Acceleration', 2, 'Complete AI/ML course', 'Complete AI/ML literacy course (fast.ai Part 1)', null],
-  ['Acceleration', 2, 'Conduct user interviews', 'Do 20+ user interviews across 2-3 problem areas', null],
-  ['Acceleration', 2, 'Start writing publicly', 'Write about learnings on LinkedIn/blog', null],
-  ['Pre-Launch', 3, 'Pick ONE problem area', 'Go deep on one specific problem to solve', null],
-  ['Pre-Launch', 3, 'Run validation experiments', 'Run 2-3 validation experiments (landing pages, manual services)', null],
-  ['Pre-Launch', 3, 'Build industry network', 'Attend events, contribute to communities', null],
-  ['Pre-Launch', 3, 'Side project milestone', 'Consider: side project with paying users? Co-founder search?', null],
-  ['Launch Ready', 4, 'Validate problem-solution fit', 'Have validated problem + solution hypothesis', null],
-  ['Launch Ready', 4, 'Achieve financial runway', 'Have runway (FIRE goal achieved or close)', null],
-  ['Launch Ready', 4, 'Get paying customers/LOIs', 'Ideally: paying customers or strong LOIs', null],
-  ['Launch Ready', 4, 'Make launch decision', 'Decision: bootstrap vs. raise? India-first or global?', null]
-];
-
-const insertMilestones = db.transaction((milestones) => {
-  for (const milestone of milestones) {
-    insertMilestone.run(...milestone);
-  }
-});
-
-insertMilestones(defaultMilestones);
-console.log('✓ Default roadmap milestones inserted');
-
-console.log('\n🎉 Database initialized successfully!');
-console.log(`📁 Database location: ${dbPath}\n`);
-
-db.close();

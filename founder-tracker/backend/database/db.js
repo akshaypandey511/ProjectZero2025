@@ -1,13 +1,13 @@
-const Database = require('better-sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const dbPath = path.join(__dirname, 'founder-tracker.db');
-const db = new Database(dbPath);
+const db = new sqlite3.Database(dbPath);
 
 // Enable foreign keys
-db.pragma('foreign_keys = ON');
+db.run('PRAGMA foreign_keys = ON');
 
 // Enable WAL mode for better concurrency
-db.pragma('journal_mode = WAL');
+db.run('PRAGMA journal_mode = WAL');
 
 module.exports = db;
