@@ -1,0 +1,1379 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SyntroMind Brain Vision — Klickbarer Prototyp</title>
+<meta name="description" content="Klickbarer Prototyp des SyntroMind Brain Vision MVP: Kamera einrichten, labeln, in Minuten trainieren, an der Linie prüfen." />
+<style>
+/* ============================================================
+   SyntroMind · Brain Vision — clickable prototype
+   Single-file, no build step. Deliberately committed to a dark
+   industrial "control room" look for shop-floor glare/contrast.
+   ============================================================ */
+
+:root{
+  /* --- neutrals: slate biased toward the teal accent, not pure black --- */
+  --ground:#0b0f14;
+  --panel:#111a22;
+  --raised:#18242e;
+  --raised-2:#20303c;
+  --line:#243441;
+  --line-soft:#1b2731;
+
+  --ink:#e9eff3;
+  --ink-dim:#adc0cc;
+  --ink-mute:#7d94a1;
+  --ink-faint:#546773;
+
+  /* --- brand accent + architecture motif --- */
+  --brand:#2fe0a8;        /* SyntroMind teal-green (from Koch #56f2ae) */
+  --brand-deep:#0e6b52;
+  --violet:#8b7bff;       /* syntrometric / architecture telemetry */
+  --violet-deep:#3a3170;
+
+  /* --- semantic (kept separate from accent; always paired w/ icon+text) --- */
+  --pass:#37d67a;   --pass-bg:#0f2a1e;
+  --fail:#ff5a6a;   --fail-bg:#2c1418;
+  --warn:#ffb23e;   --warn-bg:#2c2110;
+  --info:#45ddff;   --info-bg:#0d2732;
+
+  --shadow:0 18px 40px -22px rgba(0,0,0,.8);
+  --radius:14px;
+  --radius-sm:9px;
+
+  --font-ui:"Inter var",Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--font-ui);
+  background:
+    radial-gradient(1200px 700px at 78% -12%, rgba(47,224,168,.08), transparent 60%),
+    radial-gradient(900px 600px at 8% 110%, rgba(139,123,255,.07), transparent 55%),
+    var(--ground);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow:hidden;
+}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+::selection{background:rgba(47,224,168,.28)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mute);font-weight:600}
+
+/* ---------------------------------------------------------- app shell */
+.app{display:grid;grid-template-columns:248px 1fr;grid-template-rows:60px 1fr;height:100vh;
+     grid-template-areas:"brand top" "rail main";}
+.app.operator{grid-template-columns:0 1fr}
+.app.operator .rail,.app.operator .brand{display:none}
+.app.operator{grid-template-areas:"top top" "main main";grid-template-columns:1fr}
+
+/* brand corner */
+.brand{grid-area:brand;display:flex;align-items:center;gap:11px;padding:0 18px;
+  border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);background:rgba(9,13,18,.55)}
+.logo{width:30px;height:30px;border-radius:8px;flex:0 0 auto;position:relative;
+  background:conic-gradient(from 210deg,var(--brand),#39c0ff 45%,var(--violet) 78%,var(--brand));
+  box-shadow:0 0 0 1px rgba(47,224,168,.35),0 6px 18px -6px rgba(47,224,168,.5)}
+.logo::after{content:"";position:absolute;inset:6px;border-radius:4px;background:var(--ground);
+  box-shadow:inset 0 0 8px rgba(47,224,168,.35)}
+.logo::before{content:"";position:absolute;inset:0;z-index:2;border-radius:8px;
+  background:radial-gradient(6px 6px at 50% 50%,var(--brand),transparent 70%)}
+.brand-name{font-weight:700;letter-spacing:-.01em;line-height:1}
+.brand-name small{display:block;font-weight:600;font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--brand);margin-top:3px}
+
+/* top bar */
+.top{grid-area:top;display:flex;align-items:center;gap:14px;padding:0 16px 0 20px;
+  border-bottom:1px solid var(--line-soft);background:rgba(9,13,18,.55);backdrop-filter:blur(6px)}
+#ctxBtn{gap:10px}
+#ctxBtn .ic{width:18px;height:18px;flex:0 0 auto;color:var(--brand)}
+.ctx{display:flex;flex-direction:column;line-height:1.15;min-width:0;text-align:left}
+.ctx b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctx span{font-size:11.5px;color:var(--ink-mute)}
+.top .spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:99px;
+  font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--raised);white-space:nowrap}
+.pill .dot{width:7px;height:7px;border-radius:99px;background:var(--pass);box-shadow:0 0 0 3px rgba(55,214,122,.18)}
+.pill.warn .dot{background:var(--warn);box-shadow:0 0 0 3px rgba(255,178,62,.18)}
+.seg{display:inline-flex;background:var(--raised);border:1px solid var(--line);border-radius:99px;padding:3px}
+.seg button{height:26px;padding:0 12px;border-radius:99px;font-size:12px;font-weight:600;color:var(--ink-mute)}
+.seg button.on{background:var(--brand);color:#04140e;box-shadow:0 2px 8px -2px rgba(47,224,168,.6)}
+.persona-btn{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 6px 0 12px;border-radius:99px;
+  border:1px solid var(--line);background:var(--raised);font-size:12.5px;font-weight:600}
+.persona-btn .who{width:24px;height:24px;border-radius:99px;display:grid;place-items:center;font-size:12px;
+  background:var(--violet-deep);color:#dcd6ff}
+.persona-btn.op .who{background:var(--brand-deep);color:#b9ffe6}
+
+/* rail */
+.rail{grid-area:rail;border-right:1px solid var(--line-soft);padding:14px 12px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:4px;background:rgba(9,13,18,.35)}
+.rail .group{margin:12px 8px 4px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+.rail .group:first-child{margin-top:2px}
+.nav{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:var(--ink-dim);
+  font-size:13.5px;font-weight:500;text-align:left;width:100%;position:relative;transition:background .12s,color .12s}
+.nav:hover{background:var(--raised);color:var(--ink)}
+.nav.on{background:linear-gradient(90deg,rgba(47,224,168,.16),rgba(47,224,168,.04));color:var(--ink);font-weight:600}
+.nav.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--brand)}
+.nav .ic{width:20px;height:20px;flex:0 0 auto;color:var(--ink-mute)}
+.nav.on .ic{color:var(--brand)}
+.nav .badge{margin-left:auto;font-size:11px;font-weight:700;min-width:20px;height:20px;padding:0 6px;border-radius:99px;
+  display:grid;place-items:center;background:var(--warn-bg);color:var(--warn);font-family:var(--font-mono)}
+.rail .foot{margin-top:auto;padding:12px 10px 4px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--ink-faint);line-height:1.5}
+.rail .foot b{color:var(--ink-mute);font-weight:600}
+
+/* main */
+.main{grid-area:main;overflow-y:auto;overflow-x:hidden;position:relative;scroll-behavior:smooth}
+.screen{display:none;padding:26px 30px 60px;max-width:1180px;margin:0 auto;animation:fade .28s ease}
+.screen.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.head{margin-bottom:20px}
+.head h1{font-size:24px;font-weight:700;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.head p{margin:6px 0 0;color:var(--ink-mute);font-size:14px;max-width:64ch;line-height:1.55}
+
+/* cards + primitives */
+.card{background:linear-gradient(180deg,var(--panel),rgba(17,26,34,.7));border:1px solid var(--line-soft);
+  border-radius:var(--radius);box-shadow:var(--shadow)}
+.card.pad{padding:18px}
+.grid{display:grid;gap:16px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:14px}
+.tile{background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;padding:15px 16px;position:relative;overflow:hidden}
+.tile .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute);font-weight:600}
+.tile .v{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:27px;font-weight:600;margin-top:8px;line-height:1;letter-spacing:-.02em}
+.tile .s{font-size:12px;color:var(--ink-mute);margin-top:7px;display:flex;align-items:center;gap:6px}
+.tile .spark{position:absolute;right:0;bottom:0;left:0;height:34px;opacity:.9}
+.tile.good .v{color:var(--pass)} .tile.bad .v{color:var(--fail)} .tile.warnv .v{color:var(--warn)} .tile.brandv .v{color:var(--brand)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;height:44px;padding:0 20px;border-radius:11px;
+  font-size:14px;font-weight:600;background:var(--raised);border:1px solid var(--line);color:var(--ink);transition:.14s;white-space:nowrap}
+.btn:hover{background:var(--raised-2);border-color:#31485a}
+.btn .ic{width:18px;height:18px}
+.btn.primary{background:linear-gradient(180deg,#33f0b3,#1fbe8b);color:#04150e;border-color:transparent;
+  box-shadow:0 8px 20px -8px rgba(47,224,168,.65)}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.ghost{background:transparent}
+.btn.sm{height:34px;padding:0 13px;font-size:12.5px;border-radius:9px}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.chip{display:inline-flex;align-items:center;gap:7px;height:29px;padding:0 12px;border-radius:99px;font-size:12.5px;
+  font-weight:600;border:1px solid var(--line);background:var(--raised)}
+.chip .sw{width:10px;height:10px;border-radius:3px}
+.tag{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:7px;font-size:11.5px;font-weight:700;
+  letter-spacing:.02em}
+.tag.pass{background:var(--pass-bg);color:var(--pass)} .tag.fail{background:var(--fail-bg);color:var(--fail)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)} .tag.info{background:var(--info-bg);color:var(--info)}
+.tag .ic{width:13px;height:13px}
+
+.bar{height:8px;border-radius:99px;background:var(--raised-2);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:99px;background:var(--brand);transition:width .5s cubic-bezier(.2,.7,.2,1)}
+
+.row{display:flex;align-items:center;gap:12px}
+.between{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.muted{color:var(--ink-mute)}
+.divider{height:1px;background:var(--line-soft);margin:16px 0}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute);
+  font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line)}
+td{padding:11px 12px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:rgba(255,255,255,.015)}
+.tabwrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line-soft)}
+
+/* toast */
+.toasts{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:9px;align-items:center}
+.toast{display:flex;align-items:center;gap:10px;background:var(--raised-2);border:1px solid var(--line);
+  padding:11px 15px;border-radius:11px;font-size:13.5px;font-weight:500;box-shadow:var(--shadow);animation:pop .3s ease}
+.toast .ic{width:18px;height:18px;flex:0 0 auto}
+.toast.pass{border-color:rgba(55,214,122,.4)} .toast.pass .ic{color:var(--pass)}
+.toast.info .ic{color:var(--info)} .toast.warn .ic{color:var(--warn)} .toast.brand .ic{color:var(--brand)}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+
+/* ======= onboarding wizard ======= */
+.stepper{display:flex;gap:0;margin-bottom:22px;counter-reset:s}
+.step{flex:1;display:flex;flex-direction:column;gap:9px;position:relative;padding-top:4px}
+.step .rail-line{height:3px;border-radius:99px;background:var(--raised-2)}
+.step.done .rail-line,.step.cur .rail-line{background:var(--brand)}
+.step .lbl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-mute);font-weight:600}
+.step.cur .lbl{color:var(--ink)} .step.done .lbl{color:var(--ink-dim)}
+.step .num{width:20px;height:20px;border-radius:99px;display:grid;place-items:center;font-size:11px;font-weight:700;
+  background:var(--raised-2);color:var(--ink-mute);font-family:var(--font-mono)}
+.step.cur .num{background:var(--brand);color:#04150e} .step.done .num{background:var(--brand-deep);color:var(--brand)}
+.wizbody{min-height:330px}
+.wizpane{display:none} .wizpane.on{display:block;animation:fade .25s ease}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:7px;color:var(--ink-dim)}
+.input,select.input{width:100%;height:42px;padding:0 13px;border-radius:10px;background:var(--raised);
+  border:1px solid var(--line);color:var(--ink);font-size:14px;font-family:inherit}
+select.input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237d94a1' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center}
+.cam-list{display:grid;gap:10px}
+.cam{display:flex;align-items:center;gap:13px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:var(--raised);cursor:pointer;transition:.14s}
+.cam:hover{border-color:#33556a}
+.cam.sel{border-color:var(--brand);background:linear-gradient(90deg,rgba(47,224,168,.1),transparent)}
+.cam .camic{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;background:var(--raised-2);color:var(--brand)}
+.cam .radio{width:20px;height:20px;border-radius:99px;border:2px solid var(--line);margin-left:auto;position:relative}
+.cam.sel .radio{border-color:var(--brand)} .cam.sel .radio::after{content:"";position:absolute;inset:3px;border-radius:99px;background:var(--brand)}
+.scan{display:inline-flex;align-items:center;gap:9px;color:var(--ink-mute);font-size:13px}
+.spin{width:15px;height:15px;border-radius:99px;border:2px solid var(--line);border-top-color:var(--brand);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.calib{display:grid;grid-template-columns:1fr 260px;gap:20px;align-items:center}
+.gauge{height:12px;border-radius:99px;background:linear-gradient(90deg,var(--fail),var(--warn) 45%,var(--pass) 78%);position:relative;margin:20px 0 8px}
+.gauge .needle{position:absolute;top:-6px;width:4px;height:24px;border-radius:3px;background:#fff;box-shadow:0 0 0 2px var(--ground);transition:left .3s}
+.range{width:100%;-webkit-appearance:none;height:6px;border-radius:99px;background:var(--raised-2);outline:none}
+.range::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:99px;background:var(--brand);cursor:pointer;box-shadow:0 0 0 4px rgba(47,224,168,.2),0 2px 6px rgba(0,0,0,.4)}
+.range::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:99px;background:var(--brand);cursor:pointer}
+
+/* ======= labeling ======= */
+.label-layout{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start}
+.canvas-wrap{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#05080b;aspect-ratio:4/3}
+.canvas-wrap canvas{width:100%;height:100%;display:block}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px;margin-top:14px}
+.thumb{aspect-ratio:1;border-radius:9px;overflow:hidden;border:2px solid transparent;cursor:pointer;position:relative;background:#05080b}
+.thumb canvas{width:100%;height:100%;display:block}
+.thumb.sel{border-color:var(--brand)}
+.thumb .mk{position:absolute;top:3px;right:3px;width:15px;height:15px;border-radius:5px;display:grid;place-items:center}
+.thumb .mk.ok{background:var(--pass)} .thumb .mk.def{background:var(--fail)}
+.thumb .mk svg{width:10px;height:10px;color:#04150e}
+.health .hrow{display:flex;align-items:center;gap:10px;margin:9px 0;font-size:12.5px}
+.health .hrow .name{width:104px;color:var(--ink-dim);display:flex;align-items:center;gap:7px}
+.health .hrow .bar{flex:1}
+.health .hrow .num{width:34px;text-align:right;font-family:var(--font-mono);color:var(--ink-mute)}
+.classchips{display:flex;flex-wrap:wrap;gap:8px}
+
+/* ======= training ======= */
+.train-layout{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+.lossbox{position:relative;height:210px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(180deg,#0a1219,#070d12);overflow:hidden}
+.lossbox canvas{width:100%;height:100%;display:block}
+.lossbox .ov{position:absolute;top:12px;left:14px;font-family:var(--font-mono);font-size:12px;color:var(--ink-mute)}
+.lossbox .ov b{color:var(--brand)}
+.hier{display:flex;flex-direction:column;gap:11px}
+.hier .h{display:flex;align-items:center;gap:11px}
+.hier .h .nm{width:96px;font-size:12.5px;font-weight:600}
+.hier .h .nm small{display:block;font-weight:400;color:var(--ink-faint);font-size:10.5px}
+.hier .h .bar{flex:1}
+.hier .h .bar>i{background:linear-gradient(90deg,var(--violet),#b9aaff)}
+.hier .h .pc{width:38px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--ink-mute)}
+.big-metric{display:flex;align-items:baseline;gap:8px}
+.big-metric b{font-family:var(--font-mono);font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.big-metric span{color:var(--ink-mute);font-size:14px}
+.thresh .tvals{display:flex;justify-content:space-between;margin-top:14px;gap:14px}
+.thresh .tv{flex:1;text-align:center;padding:12px;border-radius:10px;background:var(--raised)}
+.thresh .tv b{display:block;font-family:var(--font-mono);font-size:24px;margin-bottom:3px}
+
+/* ======= live inspection ======= */
+.live-layout{display:grid;grid-template-columns:1fr 316px;gap:16px;align-items:start}
+.viewport{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);aspect-ratio:16/10;background:#04070a}
+.viewport canvas{position:absolute;inset:0;width:100%;height:100%}
+.viewport .scanline{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--brand),transparent);opacity:.55;animation:scan 2.6s linear infinite}
+@keyframes scan{0%{top:2%}100%{top:98%}}
+.verdict{position:absolute;left:14px;top:14px;right:14px;display:flex;align-items:center;gap:13px;
+  padding:13px 16px;border-radius:12px;backdrop-filter:blur(9px);border:1px solid rgba(255,255,255,.08)}
+.verdict.pass{background:rgba(15,42,30,.82)} .verdict.fail{background:rgba(44,20,24,.82)}
+.verdict .vic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
+.verdict.pass .vic{background:var(--pass);color:#04150e} .verdict.fail .vic{background:var(--fail);color:#fff}
+.verdict .vt{line-height:1.2}
+.verdict .vt b{font-size:20px;font-weight:700;display:block;letter-spacing:-.01em}
+.verdict .vt span{font-size:12.5px;color:var(--ink-dim)}
+.verdict .conf{margin-left:auto;text-align:right}
+.verdict .conf b{font-family:var(--font-mono);font-size:15px;display:block}
+.verdict .conf span{font-size:11px;color:var(--ink-mute)}
+.hud{position:absolute;left:14px;bottom:14px;display:flex;gap:8px}
+.hud .g{display:flex;flex-direction:column;gap:2px;padding:7px 12px;border-radius:9px;background:rgba(5,8,11,.7);
+  backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.06)}
+.hud .g small{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute)}
+.hud .g b{font-family:var(--font-mono);font-size:15px}
+.heat-toggle{position:absolute;right:14px;bottom:14px}
+.op-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px}
+.op-btn{min-height:76px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  font-size:15px;font-weight:700;border:1.5px solid var(--line);background:var(--raised);transition:.12s;padding:12px}
+.op-btn:hover{transform:translateY(-1px)}
+.op-btn:active{transform:translateY(1px)}
+.op-btn .ic{width:26px;height:26px}
+.op-btn.reject{border-color:rgba(255,90,106,.45);color:#ffd7dc}.op-btn.reject:hover{background:var(--fail-bg)}
+.op-btn.reject .ic{color:var(--fail)}
+.op-btn.override{border-color:rgba(255,178,62,.45);color:#ffe6bf}.op-btn.override:hover{background:var(--warn-bg)}
+.op-btn.override .ic{color:var(--warn)}
+.op-btn.call{border-color:rgba(69,221,255,.4);color:#c9f2ff}.op-btn.call:hover{background:var(--info-bg)}
+.op-btn.call .ic{color:var(--info)}
+.feed{display:flex;flex-direction:column;gap:8px;max-height:520px;overflow-y:auto}
+.feeditem{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;background:var(--raised);border:1px solid var(--line-soft);animation:pop .3s ease}
+.feeditem .fic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto}
+.feeditem.pass .fic{background:var(--pass-bg);color:var(--pass)} .feeditem.fail .fic{background:var(--fail-bg);color:var(--fail)}
+.feeditem .ft{flex:1;min-width:0}
+.feeditem .ft b{font-size:13px;font-weight:600}
+.feeditem .ft span{font-size:11px;color:var(--ink-mute);font-family:var(--font-mono)}
+.feeditem .fc{font-family:var(--font-mono);font-size:12px;color:var(--ink-mute)}
+
+/* operator full-screen tuning */
+.app.operator .screen{max-width:1080px;padding-top:22px}
+.app.operator .op-actions .op-btn{min-height:104px;font-size:18px}
+.app.operator .op-actions .op-btn .ic{width:34px;height:34px}
+
+/* review */
+.rev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.rev{border:1px solid var(--line-soft);border-radius:12px;overflow:hidden;background:var(--panel)}
+.rev .img{aspect-ratio:16/10;position:relative;background:#05080b}
+.rev .img canvas{width:100%;height:100%;display:block}
+.rev .img .ov{position:absolute;top:9px;left:9px;display:flex;gap:6px}
+.rev .body{padding:13px 14px}
+.rev .body .disp{display:flex;align-items:center;gap:8px;font-size:12.5px;margin:4px 0 12px;color:var(--ink-dim)}
+.rev .body .disp .arrow{color:var(--ink-faint)}
+.rev .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.empty{text-align:center;padding:50px 20px;color:var(--ink-mute)}
+.empty .ic{width:44px;height:44px;margin:0 auto 14px;color:var(--pass)}
+
+/* device health */
+.dev-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.dev{padding:16px;border-radius:12px;border:1px solid var(--line-soft);background:var(--panel)}
+.dev .top{display:flex;align-items:center;gap:10px;border:0;background:none;padding:0;margin-bottom:14px}
+.dev .top .di{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--raised-2)}
+.dev .top .di.ok{color:var(--pass)} .dev .top .di.warn{color:var(--warn)}
+.dev .top b{font-size:14px;font-weight:600}.dev .top small{display:block;color:var(--ink-mute);font-size:11.5px}
+.dev .stat{display:flex;justify-content:space-between;padding:7px 0;font-size:13px;border-bottom:1px solid var(--line-soft)}
+.dev .stat:last-child{border-bottom:0}
+.dev .stat span{color:var(--ink-mute)} .dev .stat b{font-family:var(--font-mono);font-weight:600}
+
+.note{display:flex;gap:11px;padding:13px 15px;border-radius:11px;background:var(--info-bg);border:1px solid rgba(69,221,255,.22);font-size:13px;line-height:1.55;color:#c8ecf6}
+.note .ic{width:19px;height:19px;flex:0 0 auto;color:var(--info);margin-top:1px}
+
+/* two-col helper */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:1080px){
+  .label-layout,.train-layout,.live-layout,.cols{grid-template-columns:1fr}
+  .calib{grid-template-columns:1fr}
+}
+@media (max-width:720px){
+  .app{grid-template-columns:0 1fr;grid-template-areas:"top top" "main main"}
+  .rail,.brand{display:none}
+  .screen{padding:18px 16px 50px}
+  .op-actions{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- brand corner -->
+  <div class="brand">
+    <div class="logo" aria-hidden="true"></div>
+    <div class="brand-name">SyntroMind<small>Brain Vision</small></div>
+  </div>
+
+  <!-- top bar -->
+  <header class="top">
+    <button class="pill" id="ctxBtn" style="border-radius:11px;height:40px" title="Werk / Linie wechseln">
+      <span class="ic" aria-hidden="true"></span>
+      <span class="ctx"><b id="ctxLine">Linie 3 · Getriebegehäuse</b><span id="ctxPlant">Werk Stuttgart-Feuerbach</span></span>
+    </button>
+    <div class="spacer"></div>
+    <span class="pill" id="edgePill"><span class="dot"></span><span data-i18n="edgeOnline">Edge verbunden</span></span>
+    <div class="seg" role="group" aria-label="Sprache">
+      <button data-lang="de" class="on">DE</button>
+      <button data-lang="en">EN</button>
+    </div>
+    <button class="persona-btn" id="personaBtn">
+      <span class="who" id="whoAvatar">M</span>
+      <span id="personaLabel" data-i18n="pEngineer">Ingenieurin</span>
+    </button>
+  </header>
+
+  <!-- rail -->
+  <nav class="rail" id="rail">
+    <div class="group" data-i18n="grpSetup">Einrichten</div>
+    <button class="nav on" data-screen="onboarding"><span class="ic" data-ic="wizard"></span><span data-i18n="navOnboarding">Inbetriebnahme</span></button>
+    <button class="nav" data-screen="labeling"><span class="ic" data-ic="label"></span><span data-i18n="navLabeling">Datensatz &amp; Labeln</span></button>
+    <button class="nav" data-screen="training"><span class="ic" data-ic="train"></span><span data-i18n="navTraining">Training &amp; Validierung</span></button>
+    <div class="group" data-i18n="grpOperate">Betreiben</div>
+    <button class="nav" data-screen="live"><span class="ic" data-ic="live"></span><span data-i18n="navLive">Live-Prüfung</span></button>
+    <button class="nav" data-screen="review"><span class="ic" data-ic="review"></span><span data-i18n="navReview">Prüfliste</span><span class="badge" id="revBadge">4</span></button>
+    <div class="group" data-i18n="grpMonitor">Überwachen</div>
+    <button class="nav" data-screen="reports"><span class="ic" data-ic="report"></span><span data-i18n="navReports">Berichte &amp; Audit</span></button>
+    <button class="nav" data-screen="device"><span class="ic" data-ic="device"></span><span data-i18n="navDevice">Gerätezustand</span></button>
+    <div class="foot">
+      <b data-i18n="footTitle">Structural-AI-Kern</b><br>
+      <span data-i18n="footBody">Angetrieben von der Koch-Architektur — energieeffizientes Training, lokal am Edge.</span>
+    </div>
+  </nav>
+
+  <!-- main -->
+  <main class="main" id="main">
+
+    <!-- ============ 1. ONBOARDING ============ -->
+    <section class="screen on" data-screen="onboarding">
+      <div class="head">
+        <div class="eyebrow" data-i18n="ob_eyebrow">Inbetriebnahme · geführt</div>
+        <h1 data-i18n="ob_h">Kamera &amp; Linie einrichten</h1>
+        <p data-i18n="ob_p">Von der Kamera auf dem Stativ bis zur ersten Prüfung — ohne ML-Ingenieur im Raum. Ziel: erste Erkennung in unter einem Tag.</p>
+      </div>
+
+      <div class="stepper" id="stepper">
+        <div class="step cur" data-step="0"><div class="rail-line"></div><div class="lbl"><span class="num">1</span><span data-i18n="ob_s1">Kamera</span></div></div>
+        <div class="step" data-step="1"><div class="rail-line"></div><div class="lbl"><span class="num">2</span><span data-i18n="ob_s2">Linie</span></div></div>
+        <div class="step" data-step="2"><div class="rail-line"></div><div class="lbl"><span class="num">3</span><span data-i18n="ob_s3">Beleuchtung</span></div></div>
+        <div class="step" data-step="3"><div class="rail-line"></div><div class="lbl"><span class="num">4</span><span data-i18n="ob_s4">Referenzbilder</span></div></div>
+        <div class="step" data-step="4"><div class="rail-line"></div><div class="lbl"><span class="num">5</span><span data-i18n="ob_s5">Fertig</span></div></div>
+      </div>
+
+      <div class="card pad">
+        <div class="wizbody">
+          <!-- step 1 -->
+          <div class="wizpane on" data-pane="0">
+            <div class="between" style="margin-bottom:14px">
+              <div><b data-i18n="ob_c_h">GigE-Vision-Kameras im Netzwerk</b><div class="muted" style="font-size:12.5px;margin-top:3px" data-i18n="ob_c_p">Standardprotokoll — keine kameraspezifischen Treiber.</div></div>
+              <span class="scan" id="camScan"><span class="spin"></span><span data-i18n="ob_scanning">suche…</span></span>
+            </div>
+            <div class="cam-list" id="camList"></div>
+          </div>
+          <!-- step 2 -->
+          <div class="wizpane" data-pane="1">
+            <div class="cols">
+              <div>
+                <div class="field"><label data-i18n="ob_line_name">Linienbezeichnung</label><input class="input" value="Linie 3 · Getriebegehäuse"></div>
+                <div class="field"><label data-i18n="ob_part">Bauteil / Variante</label><input class="input" value="GH-2247 · Aluminiumguss"></div>
+                <div class="field"><label data-i18n="ob_mode">Betriebsart beim Start</label>
+                  <select class="input"><option data-i18n="ob_shadow">Schattenbetrieb (parallel, ohne Liniensteuerung)</option><option data-i18n="ob_active">Aktivbetrieb</option></select>
+                </div>
+              </div>
+              <div>
+                <div class="field"><label data-i18n="ob_takt">Taktzeit</label><input class="input" value="2,4 s / Teil"></div>
+                <div class="field"><label data-i18n="ob_edge">Edge-Gerät</label><input class="input" value="SyntroMind Edge EX-1 · #EX1-0442"></div>
+                <div class="note" style="margin-top:22px"><span class="ic" data-ic="shield"></span><span data-i18n="ob_bt">Das System prüft <b>Teile, keine Personen</b>. Keine Personen- oder Leistungsanalyse — Betriebsrat-konform ab Werk.</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- step 3 -->
+          <div class="wizpane" data-pane="2">
+            <div class="calib">
+              <div>
+                <b data-i18n="ob_calib_h">Beleuchtung &amp; Kontrast kalibrieren</b>
+                <p class="muted" style="font-size:13px;line-height:1.55" data-i18n="ob_calib_p">Gleichmäßige Ausleuchtung ist die häufigste Fehlerquelle an der Linie. Ziehen Sie den Regler, bis der Kontrastwert im grünen Bereich steht.</p>
+                <div class="gauge"><div class="needle" id="calibNeedle" style="left:64%"></div></div>
+                <input type="range" class="range" id="calibRange" min="0" max="100" value="64" aria-label="Kontrast">
+              </div>
+              <div class="tile brandv"><div class="k" data-i18n="ob_contrast">Kontrastindex</div><div class="v" id="calibVal">0.86</div><div class="s" id="calibState"><span class="tag pass"><span class="ic" data-ic="check"></span><span data-i18n="ob_good">gut</span></span></div></div>
+            </div>
+          </div>
+          <!-- step 4 -->
+          <div class="wizpane" data-pane="3">
+            <b data-i18n="ob_ref_h">Referenzbilder von der laufenden Linie aufnehmen</b>
+            <p class="muted" style="font-size:13px" data-i18n="ob_ref_p">Nehmen Sie einige Gut-Teile auf. Diese bilden das geometrische Referenzfeld — Defekte werden als Abweichung davon gemessen.</p>
+            <div class="between" style="margin:16px 0"><div class="big-metric"><b id="refCount">0</b><span data-i18n="ob_captured">Bilder aufgenommen</span></div>
+              <button class="btn primary" id="captureBtn"><span class="ic" data-ic="camera"></span><span data-i18n="ob_capture">Aufnehmen</span></button></div>
+            <div class="thumbs" id="refThumbs"></div>
+          </div>
+          <!-- step 5 -->
+          <div class="wizpane" data-pane="4">
+            <div style="text-align:center;padding:20px 0">
+              <div style="width:64px;height:64px;border-radius:16px;margin:0 auto 16px;display:grid;place-items:center;background:var(--pass-bg);color:var(--pass)"><span class="ic" data-ic="check" style="width:34px;height:34px"></span></div>
+              <b style="font-size:19px" data-i18n="ob_done_h">Linie eingerichtet</b>
+              <p class="muted" style="max-width:44ch;margin:8px auto 0;font-size:13.5px" data-i18n="ob_done_p">Kamera verbunden, Beleuchtung kalibriert, Referenzfeld angelegt. Weiter zum Datensatz, um Defektklassen zu labeln.</p>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="between">
+          <button class="btn ghost" id="wizBack" disabled><span class="ic" data-ic="back"></span><span data-i18n="back">Zurück</span></button>
+          <div class="row" style="gap:8px"><span class="muted mono" id="wizProg" style="font-size:12.5px">1 / 5</span>
+          <button class="btn primary" id="wizNext"><span data-i18n="next">Weiter</span><span class="ic" data-ic="fwd"></span></button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 2. LABELING ============ -->
+    <section class="screen" data-screen="labeling">
+      <div class="head">
+        <div class="eyebrow" data-i18n="lb_eyebrow">Datensatz · Labeln</div>
+        <h1 data-i18n="lb_h">Gut-Teile &amp; Defektklassen labeln</h1>
+        <p data-i18n="lb_p">Ziehen Sie einen Rahmen um jeden Defekt und weisen Sie eine Klasse zu. Der Datensatz-Gesundheitsanzeiger zeigt, ob genügend Beispiele je Klasse vorliegen.</p>
+      </div>
+      <div class="label-layout">
+        <div class="card pad">
+          <div class="between" style="margin-bottom:12px">
+            <div class="classchips" id="classChips"></div>
+            <button class="btn sm" id="addBoxBtn"><span class="ic" data-ic="plus"></span><span data-i18n="lb_addbox">Rahmen hinzufügen</span></button>
+          </div>
+          <div class="canvas-wrap"><canvas id="labelCanvas" width="800" height="600"></canvas></div>
+          <div class="thumbs" id="labelThumbs"></div>
+        </div>
+        <div class="grid" style="gap:16px">
+          <div class="card pad health">
+            <div class="between" style="margin-bottom:6px"><b data-i18n="lb_health">Datensatz-Gesundheit</b><span class="tag warn"><span class="ic" data-ic="alert"></span><span data-i18n="lb_needmore">2 Klassen dünn</span></span></div>
+            <div id="healthRows"></div>
+            <div class="divider"></div>
+            <div class="between" style="font-size:13px"><span class="muted" data-i18n="lb_total">Bilder gesamt</span><b class="mono" id="lbTotal">237</b></div>
+            <div class="between" style="font-size:13px;margin-top:6px"><span class="muted" data-i18n="lb_unlabeled">Noch nicht gelabelt</span><b class="mono" style="color:var(--warn)" id="lbUnlab">63</b></div>
+          </div>
+          <div class="card pad">
+            <b data-i18n="lb_tips">Klassen verwalten</b>
+            <p class="muted" style="font-size:12.5px;line-height:1.5" data-i18n="lb_tips_p">Neue Defektart entdeckt? Legen Sie eine Klasse an — das Referenzfeld bleibt unverändert, nur die Abweichung wird gelernt.</p>
+            <button class="btn sm wide" id="newClassBtn"><span class="ic" data-ic="plus"></span><span data-i18n="lb_newclass">Neue Klasse</span></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3. TRAINING ============ -->
+    <section class="screen" data-screen="training">
+      <div class="head">
+        <div class="eyebrow" data-i18n="tr_eyebrow">Training · Validierung</div>
+        <h1 data-i18n="tr_h">In Minuten trainieren — nicht in Tagen</h1>
+        <p data-i18n="tr_p">Ein Klick startet den Trainingslauf. Die Effizienz der Architektur wird sichtbar: Konvergenz in wenigen Epochen, Energie pro Epoche, ausgelastete Re-Entry-Hierarchie.</p>
+      </div>
+      <div class="train-layout">
+        <div class="grid" style="gap:16px">
+          <div class="card pad">
+            <div class="between" style="margin-bottom:14px">
+              <div><b data-i18n="tr_run">Trainingslauf</b><div class="muted mono" style="font-size:12px;margin-top:3px" id="trStatus" data-i18n="tr_idle">bereit · 237 Bilder · 5 Klassen</div></div>
+              <button class="btn primary" id="trainBtn"><span class="ic" data-ic="play"></span><span data-i18n="tr_start">Training starten</span></button>
+            </div>
+            <div class="lossbox"><canvas id="lossCanvas" width="900" height="420"></canvas>
+              <div class="ov"><span data-i18n="tr_epoch">Epoche</span> <b id="ovEpoch">0</b> · loss <b id="ovLoss">—</b></div></div>
+            <div class="tiles" style="margin-top:14px">
+              <div class="tile brandv"><div class="k" data-i18n="tr_converge">Konvergiert nach</div><div class="v"><span id="mConverge">—</span></div><div class="s"><span data-i18n="tr_epochs">Epochen</span></div></div>
+              <div class="tile"><div class="k" data-i18n="tr_energy">Energie / Lauf</div><div class="v"><span id="mEnergy">—</span></div><div class="s">Wh · <span data-i18n="tr_perepoch">gemessen</span></div></div>
+              <div class="tile"><div class="k" data-i18n="tr_time">Dauer</div><div class="v"><span id="mTime">—</span></div><div class="s" data-i18n="tr_onbox">auf Edge EX-1</div></div>
+            </div>
+          </div>
+
+          <!-- validation, revealed after training -->
+          <div class="card pad" id="valCard" style="opacity:.5">
+            <div class="between" style="margin-bottom:6px"><b data-i18n="tr_val">Validierung — in Klartext</b><span class="tag info"><span class="ic" data-ic="info"></span><span data-i18n="tr_holdout">Holdout · 48 Teile</span></span></div>
+            <p class="muted" style="font-size:12.5px" data-i18n="tr_val_p">Keine F1-Scores — nur die zwei Zahlen, die an der Linie zählen.</p>
+            <div class="cols" style="margin-top:6px">
+              <div class="tile good"><div class="k" data-i18n="tr_catch">Fangrate (Zielklasse)</div><div class="v"><span id="mCatch">—</span></div><div class="s" data-i18n="tr_catch_s">erkannte Defekte</div></div>
+              <div class="tile warnv"><div class="k" data-i18n="tr_false">Fehlalarme</div><div class="v"><span id="mFalse">—</span></div><div class="s" data-i18n="tr_false_s">Gut-Teile fälschl. abgewiesen</div></div>
+            </div>
+            <div class="thresh" style="margin-top:16px">
+              <div class="between"><label style="font-size:13px;font-weight:600" data-i18n="tr_thresh">Entscheidungsschwelle</label><b class="mono" id="threshVal">0.72</b></div>
+              <input type="range" class="range" id="threshRange" min="40" max="95" value="72" disabled style="margin-top:10px" aria-label="Schwelle">
+              <div class="tvals">
+                <div class="tv"><b style="color:var(--pass)" id="tvCatch">99.1%</b><span class="muted" style="font-size:11.5px" data-i18n="tr_catch">Fangrate</span></div>
+                <div class="tv"><b style="color:var(--warn)" id="tvFalse">2.1%</b><span class="muted" style="font-size:11.5px" data-i18n="tr_false">Fehlalarme</span></div>
+              </div>
+            </div>
+            <button class="btn primary wide" id="deployBtn" style="margin-top:16px" disabled><span class="ic" data-ic="rocket"></span><span data-i18n="tr_deploy">Auf Edge bereitstellen</span></button>
+          </div>
+        </div>
+
+        <div class="grid" style="gap:16px">
+          <div class="card pad">
+            <div class="between" style="margin-bottom:14px"><b data-i18n="tr_hier">Re-Entry-Hierarchie</b><span class="chip" style="height:24px"><span class="sw" style="background:var(--violet)"></span>Koch</span></div>
+            <div class="hier" id="hier">
+              <div class="h"><div class="nm">Metron<small data-i18n="tr_m1">Unterscheidung</small></div><div class="bar"><i style="width:0%"></i></div><div class="pc">0%</div></div>
+              <div class="h"><div class="nm">Syntrom<small data-i18n="tr_m2">Verknüpfung</small></div><div class="bar"><i style="width:0%"></i></div><div class="pc">0%</div></div>
+              <div class="h"><div class="nm">Metroplex&nbsp;I<small data-i18n="tr_m3">Aggregation</small></div><div class="bar"><i style="width:0%"></i></div><div class="pc">0%</div></div>
+              <div class="h"><div class="nm">Metroplex&nbsp;II<small data-i18n="tr_m4">Rückprojektion</small></div><div class="bar"><i style="width:0%"></i></div><div class="pc">0%</div></div>
+            </div>
+            <div class="divider"></div>
+            <p class="muted" style="font-size:11.5px;line-height:1.55" data-i18n="tr_hier_p">Gemessene Auslastung der Verarbeitungspfade während des Laufs — die Effizienz-These der Architektur als sichtbare Zahl, nicht als Marketing.</p>
+          </div>
+          <div class="card pad">
+            <b data-i18n="tr_vs">Retrain vs. altes Verfahren</b>
+            <div style="margin-top:12px">
+              <div class="between" style="font-size:12.5px;margin-bottom:5px"><span class="muted" data-i18n="tr_syntro">SyntroMind</span><b class="mono" style="color:var(--brand)" id="vsNew">~7 Min</b></div>
+              <div class="bar" style="height:10px"><i style="width:6%"></i></div>
+              <div class="between" style="font-size:12.5px;margin:12px 0 5px"><span class="muted" data-i18n="tr_legacy">Regelbasiert / manuell</span><b class="mono muted">3–5 Tage</b></div>
+              <div class="bar" style="height:10px"><i style="width:100%;background:var(--ink-faint)"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4. LIVE INSPECTION ============ -->
+    <section class="screen" data-screen="live">
+      <div class="head">
+        <div class="eyebrow" data-i18n="lv_eyebrow">Live-Prüfung · Bediener</div>
+        <h1 data-i18n="lv_h">Live-Prüfung</h1>
+        <p data-i18n="lv_p">Ein Bildschirm, drei Tasten. Jede Markierung zeigt per Heatmap das Warum und die Sicherheit in Klartext — nie eine nackte Wahrscheinlichkeit.</p>
+      </div>
+      <div class="live-layout">
+        <div>
+          <div class="viewport" id="viewport">
+            <canvas id="liveCanvas" width="960" height="600"></canvas>
+            <div class="scanline"></div>
+            <div class="verdict pass" id="verdict">
+              <div class="vic"><span class="ic" data-ic="check"></span></div>
+              <div class="vt"><b id="verdictText">Teil in Ordnung</b><span id="verdictSub">GH-2247 · Prüfung bestanden</span></div>
+              <div class="conf"><b id="confText">sehr sicher</b><span id="confPct">99.4%</span></div>
+            </div>
+            <div class="hud">
+              <div class="g"><small data-i18n="lv_latency">Latenz</small><b id="latVal">24 ms</b></div>
+              <div class="g"><small data-i18n="lv_through">Durchsatz</small><b id="thruVal">25 /min</b></div>
+              <div class="g"><small data-i18n="lv_part">Teil-ID</small><b id="partVal">#004212</b></div>
+            </div>
+            <button class="btn sm heat-toggle" id="heatBtn"><span class="ic" data-ic="heat"></span><span data-i18n="lv_heat">Heatmap</span></button>
+          </div>
+          <div class="op-actions">
+            <button class="op-btn reject" id="btnReject"><span class="ic" data-ic="reject"></span><span data-i18n="lv_confirm">Ausschuss bestätigen</span></button>
+            <button class="op-btn override" id="btnOverride"><span class="ic" data-ic="override"></span><span data-i18n="lv_override">Übersteuern</span></button>
+            <button class="op-btn call" id="btnCall"><span class="ic" data-ic="call"></span><span data-i18n="lv_call">Ingenieur rufen</span></button>
+          </div>
+        </div>
+        <div class="grid" style="gap:16px">
+          <div class="card pad">
+            <div class="between" style="margin-bottom:10px"><b data-i18n="lv_recent">Letzte Teile</b>
+              <button class="btn sm ghost" id="pauseBtn"><span class="ic" data-ic="pause"></span><span data-i18n="lv_pause">Pause</span></button></div>
+            <div class="feed" id="liveFeed"></div>
+          </div>
+          <div class="tiles" style="grid-template-columns:1fr 1fr">
+            <div class="tile good"><div class="k" data-i18n="lv_pass">Bestanden</div><div class="v" id="kPass">0</div></div>
+            <div class="tile bad"><div class="k" data-i18n="lv_fail">Abgewiesen</div><div class="v" id="kFail">0</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5. REVIEW QUEUE ============ -->
+    <section class="screen" data-screen="review">
+      <div class="head">
+        <div class="eyebrow" data-i18n="rv_eyebrow">Prüfliste · Ingenieur</div>
+        <h1 data-i18n="rv_h">Übersteuerungen &amp; Grenzfälle prüfen</h1>
+        <p data-i18n="rv_p">Wo Bediener übersteuert haben oder das Modell unsicher war. Jeder in den Datensatz übernommene Fall macht das nächste Modell besser — das ist der Datenschwungrad.</p>
+      </div>
+      <div class="rev-grid" id="revGrid"></div>
+    </section>
+
+    <!-- ============ 6. REPORTS ============ -->
+    <section class="screen" data-screen="reports">
+      <div class="head">
+        <div class="eyebrow" data-i18n="rp_eyebrow">Berichte · Audit</div>
+        <h1 data-i18n="rp_h">Schicht- &amp; Tagesberichte</h1>
+        <p data-i18n="rp_p">Vollständiges, revisionssicheres Entscheidungsprotokoll — ISO-9001-freundlich. Export als PDF oder CSV.</p>
+      </div>
+      <div class="between" style="margin-bottom:16px">
+        <div class="seg" role="group" aria-label="Zeitraum">
+          <button class="on" data-i18n="rp_shift">Schicht</button><button data-i18n="rp_day">Tag</button><button data-i18n="rp_week">Woche</button>
+        </div>
+        <div class="row" style="gap:8px">
+          <button class="btn sm" id="csvBtn"><span class="ic" data-ic="csv"></span>CSV</button>
+          <button class="btn sm primary" id="pdfBtn"><span class="ic" data-ic="pdf"></span>PDF</button>
+        </div>
+      </div>
+      <div class="tiles" style="margin-bottom:16px">
+        <div class="tile"><div class="k" data-i18n="rp_inspected">Geprüfte Teile</div><div class="v" id="rInspected">1 284</div><div class="s"><span class="tag pass"><span class="ic" data-ic="up"></span>Schicht A</span></div></div>
+        <div class="tile good"><div class="k" data-i18n="rp_caught">Defekte erkannt</div><div class="v" id="rCaught">31</div><div class="s mono" data-i18n="rp_rate">98.9% Fangrate</div></div>
+        <div class="tile warnv"><div class="k" data-i18n="rp_false">Fehlabweisungen</div><div class="v" id="rFalse">7</div><div class="s mono">0.5%</div></div>
+        <div class="tile"><div class="k" data-i18n="rp_override">Übersteuerungsrate</div><div class="v" id="rOverride">1.2%</div><div class="s"><span class="tag pass"><span class="ic" data-ic="down"></span><span data-i18n="rp_trend">fällt</span></span></div></div>
+      </div>
+      <div class="card pad">
+        <div class="between" style="margin-bottom:12px"><b data-i18n="rp_log">Entscheidungsprotokoll</b><span class="muted mono" style="font-size:12px">audit-log · v0.9.3</span></div>
+        <div class="tabwrap"><table>
+          <thead><tr><th data-i18n="rp_time">Zeit</th><th data-i18n="rp_partc">Teil</th><th data-i18n="rp_verdict">Urteil</th><th data-i18n="rp_conf">Sicherheit</th><th data-i18n="rp_action">Disposition</th><th data-i18n="rp_by">Durch</th></tr></thead>
+          <tbody id="logBody"></tbody>
+        </table></div>
+      </div>
+      <div class="note" style="margin-top:16px"><span class="ic" data-ic="shield"></span><span data-i18n="rp_note">Dieser Bericht enthält ausschließlich <b>teilebezogene</b> Entscheidungen. Es werden keine Bediener-Leistungsdaten erfasst oder ausgewertet — Betriebsrat-konform.</span></div>
+    </section>
+
+    <!-- ============ 7. DEVICE HEALTH ============ -->
+    <section class="screen" data-screen="device">
+      <div class="head">
+        <div class="eyebrow" data-i18n="dv_eyebrow">Gerätezustand</div>
+        <h1 data-i18n="dv_h">Edge-Gerät &amp; Kamera</h1>
+        <p data-i18n="dv_p">Läuft auch offline weiter. Modellversion, Kamerastatus und Netzwerk auf einen Blick — Updates kommen planbar, nie als Überraschung.</p>
+      </div>
+      <div class="dev-grid" style="margin-bottom:16px">
+        <div class="dev">
+          <div class="top"><div class="di ok"><span class="ic" data-ic="device"></span></div><div><b>SyntroMind Edge EX-1</b><small>#EX1-0442</small></div><span class="tag pass" style="margin-left:auto"><span class="ic" data-ic="check"></span><span data-i18n="dv_online">online</span></span></div>
+          <div class="stat"><span data-i18n="dv_temp">Temperatur</span><b>47 °C</b></div>
+          <div class="stat"><span data-i18n="dv_cpu">Auslastung</span><b>38 %</b></div>
+          <div class="stat"><span data-i18n="dv_uptime">Laufzeit</span><b>12 T 04:11</b></div>
+        </div>
+        <div class="dev">
+          <div class="top"><div class="di ok"><span class="ic" data-ic="camera"></span></div><div><b>Basler acA2440</b><small>GigE Vision</small></div><span class="tag pass" style="margin-left:auto"><span class="ic" data-ic="check"></span><span data-i18n="dv_stream">Stream</span></span></div>
+          <div class="stat"><span data-i18n="dv_fps">Bildrate</span><b>62 fps</b></div>
+          <div class="stat"><span data-i18n="dv_expo">Belichtung</span><b>3.2 ms</b></div>
+          <div class="stat"><span data-i18n="dv_contrast">Kontrastindex</span><b>0.86</b></div>
+        </div>
+        <div class="dev">
+          <div class="top"><div class="di warn"><span class="ic" data-ic="wifi"></span></div><div><b data-i18n="dv_net">Netzwerk</b><small data-i18n="dv_offtol">offline-tolerant</small></div><span class="tag warn" style="margin-left:auto"><span class="ic" data-ic="alert"></span><span data-i18n="dv_intermit">instabil</span></span></div>
+          <div class="stat"><span data-i18n="dv_buffer">Lokaler Puffer</span><b>2 145 <span data-i18n="dv_frames">Bilder</span></b></div>
+          <div class="stat"><span data-i18n="dv_sync">Letzte Sync</span><b>vor 3 min</b></div>
+          <div class="stat"><span data-i18n="dv_dataloss">Datenverlust</span><b style="color:var(--pass)">0</b></div>
+        </div>
+      </div>
+      <div class="card pad">
+        <div class="between">
+          <div><b data-i18n="dv_model">Bereitgestelltes Modell</b><div class="muted" style="font-size:12.5px;margin-top:3px"><span class="mono" id="dvVersion">brain-vision-gh2247 · v0.9.3</span> · <span data-i18n="dv_deployed">bereitgestellt vor 2 Tagen</span></div></div>
+          <button class="btn sm" id="otaBtn"><span class="ic" data-ic="download"></span><span data-i18n="dv_ota">Update prüfen</span></button>
+        </div>
+        <div class="bar" id="otaBar" style="margin-top:14px;display:none"><i style="width:0%"></i></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* =========================================================================
+   icons — inline SVG, stroke-based, no external fonts
+   ========================================================================= */
+const ICONS = {
+  wizard:'M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 21l-4.9 2.6.9-5.5-4-3.9 5.5-.8z',
+  label:'M4 5h11l5 7-5 7H4z M13 12h.01',
+  train:'M4 18l5-6 4 3 7-9 M4 18h16',
+  live:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z|M12 12m-3 0a3 3 0 106 0 3 3 0 10-6 0',
+  review:'M9 11l3 3 8-8 M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9',
+  report:'M7 3h7l5 5v13H7z M14 3v5h5 M9 13h6 M9 17h6',
+  device:'M4 5h16v10H4z M2 19h20 M9 15v4 M15 15v4',
+  camera:'M4 8h3l1.5-2h7L17 8h3v11H4z|M12 13m-3 0a3 3 0 106 0 3 3 0 10-6 0',
+  shield:'M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z|M9 12l2 2 4-4',
+  check:'M5 12l4 4 10-10',
+  alert:'M12 4l9 16H3z|M12 10v4|M12 17h.01',
+  plus:'M12 5v14 M5 12h14',
+  back:'M15 6l-6 6 6 6',
+  fwd:'M9 6l6 6-6 6',
+  play:'M7 5l12 7-12 7z',
+  rocket:'M5 15c-1 2-1 4-1 4s2 0 4-1M9 15l-4-2 2-5c2-5 6-6 10-6 0 4-1 8-6 10l-5 2-2-4z|M14 9m-1 0a1 1 0 102 0 1 1 0 10-2 0',
+  info:'M12 8h.01 M11 12h1v5h1 M12 3a9 9 0 100 18 9 9 0 000-18z',
+  heat:'M12 3c3 4 5 6 5 9a5 5 0 01-10 0c0-3 2-5 5-9z',
+  reject:'M12 3a9 9 0 100 18 9 9 0 000-18z|M8 12h8',
+  override:'M3 12a9 9 0 019-9 9 9 0 016 2.3L21 8 M21 3v5h-5|M21 12a9 9 0 01-9 9 9 9 0 01-6-2.3L3 16 M3 21v-5h5',
+  call:'M6 3h4l2 5-3 2c1 3 3 5 6 6l2-3 5 2v4c0 1-1 2-2 2C10 21 3 14 3 5c0-1 1-2 2-2z',
+  pause:'M8 5v14 M16 5v14',
+  csv:'M7 3h7l5 5v13H7z|M14 3v5h5',
+  pdf:'M7 3h7l5 5v13H7z|M14 3v5h5|M10 14h4',
+  up:'M12 19V5 M6 11l6-6 6 6',
+  down:'M12 5v14 M6 13l6 6 6-6',
+  wifi:'M2 8c6-5 14-5 20 0 M5 12c4-3 10-3 14 0 M8.5 15.5c2-1.5 5-1.5 7 0 M12 19h.01',
+  download:'M12 3v12 M7 11l5 5 5-5 M5 21h14'
+};
+function svg(name){
+  const paths=(ICONS[name]||'').split('|').map(d=>`<path d="${d}"/>`).join('');
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="100%" height="100%">${paths}</svg>`;
+}
+document.querySelectorAll('[data-ic]').forEach(el=>el.innerHTML=svg(el.dataset.ic));
+document.getElementById('ctxBtn').querySelector('.ic').innerHTML=svg('device');
+
+/* =========================================================================
+   i18n
+   ========================================================================= */
+const I18N={
+ de:{edgeOnline:"Edge verbunden",pEngineer:"Ingenieurin",pOperator:"Bediener",grpSetup:"Einrichten",grpOperate:"Betreiben",grpMonitor:"Überwachen",
+  navOnboarding:"Inbetriebnahme",navLabeling:"Datensatz & Labeln",navTraining:"Training & Validierung",navLive:"Live-Prüfung",navReview:"Prüfliste",navReports:"Berichte & Audit",navDevice:"Gerätezustand",
+  footTitle:"Structural-AI-Kern",footBody:"Angetrieben von der Koch-Architektur — energieeffizientes Training, lokal am Edge.",
+  back:"Zurück",next:"Weiter",
+  ob_eyebrow:"Inbetriebnahme · geführt",ob_h:"Kamera & Linie einrichten",ob_p:"Von der Kamera auf dem Stativ bis zur ersten Prüfung — ohne ML-Ingenieur im Raum. Ziel: erste Erkennung in unter einem Tag.",
+  ob_s1:"Kamera",ob_s2:"Linie",ob_s3:"Beleuchtung",ob_s4:"Referenzbilder",ob_s5:"Fertig",
+  ob_c_h:"GigE-Vision-Kameras im Netzwerk",ob_c_p:"Standardprotokoll — keine kameraspezifischen Treiber.",ob_scanning:"suche…",
+  ob_line_name:"Linienbezeichnung",ob_part:"Bauteil / Variante",ob_mode:"Betriebsart beim Start",ob_shadow:"Schattenbetrieb (parallel, ohne Liniensteuerung)",ob_active:"Aktivbetrieb",
+  ob_takt:"Taktzeit",ob_edge:"Edge-Gerät",ob_bt:"Das System prüft <b>Teile, keine Personen</b>. Keine Personen- oder Leistungsanalyse — Betriebsrat-konform ab Werk.",
+  ob_calib_h:"Beleuchtung & Kontrast kalibrieren",ob_calib_p:"Gleichmäßige Ausleuchtung ist die häufigste Fehlerquelle an der Linie. Ziehen Sie den Regler, bis der Kontrastwert im grünen Bereich steht.",
+  ob_contrast:"Kontrastindex",ob_good:"gut",ob_ref_h:"Referenzbilder von der laufenden Linie aufnehmen",ob_ref_p:"Nehmen Sie einige Gut-Teile auf. Diese bilden das geometrische Referenzfeld — Defekte werden als Abweichung davon gemessen.",
+  ob_captured:"Bilder aufgenommen",ob_capture:"Aufnehmen",ob_done_h:"Linie eingerichtet",ob_done_p:"Kamera verbunden, Beleuchtung kalibriert, Referenzfeld angelegt. Weiter zum Datensatz, um Defektklassen zu labeln.",
+  lb_eyebrow:"Datensatz · Labeln",lb_h:"Gut-Teile & Defektklassen labeln",lb_p:"Ziehen Sie einen Rahmen um jeden Defekt und weisen Sie eine Klasse zu. Der Datensatz-Gesundheitsanzeiger zeigt, ob genügend Beispiele je Klasse vorliegen.",
+  lb_addbox:"Rahmen hinzufügen",lb_health:"Datensatz-Gesundheit",lb_needmore:"2 Klassen dünn",lb_total:"Bilder gesamt",lb_unlabeled:"Noch nicht gelabelt",
+  lb_tips:"Klassen verwalten",lb_tips_p:"Neue Defektart entdeckt? Legen Sie eine Klasse an — das Referenzfeld bleibt unverändert, nur die Abweichung wird gelernt.",lb_newclass:"Neue Klasse",
+  tr_eyebrow:"Training · Validierung",tr_h:"In Minuten trainieren — nicht in Tagen",tr_p:"Ein Klick startet den Trainingslauf. Die Effizienz der Architektur wird sichtbar: Konvergenz in wenigen Epochen, Energie pro Epoche, ausgelastete Re-Entry-Hierarchie.",
+  tr_run:"Trainingslauf",tr_idle:"bereit · 237 Bilder · 5 Klassen",tr_start:"Training starten",tr_epoch:"Epoche",tr_converge:"Konvergiert nach",tr_epochs:"Epochen",tr_energy:"Energie / Lauf",tr_perepoch:"gemessen",tr_time:"Dauer",tr_onbox:"auf Edge EX-1",
+  tr_val:"Validierung — in Klartext",tr_holdout:"Holdout · 48 Teile",tr_val_p:"Keine F1-Scores — nur die zwei Zahlen, die an der Linie zählen.",tr_catch:"Fangrate",tr_catch_s:"erkannte Defekte",tr_false:"Fehlalarme",tr_false_s:"Gut-Teile fälschl. abgewiesen",
+  tr_thresh:"Entscheidungsschwelle",tr_deploy:"Auf Edge bereitstellen",tr_hier:"Re-Entry-Hierarchie",tr_m1:"Unterscheidung",tr_m2:"Verknüpfung",tr_m3:"Aggregation",tr_m4:"Rückprojektion",
+  tr_hier_p:"Gemessene Auslastung der Verarbeitungspfade während des Laufs — die Effizienz-These der Architektur als sichtbare Zahl, nicht als Marketing.",tr_vs:"Retrain vs. altes Verfahren",tr_syntro:"SyntroMind",tr_legacy:"Regelbasiert / manuell",tr_training:"trainiert…",tr_convdone:"Konvergiert — validiert",
+  lv_eyebrow:"Live-Prüfung · Bediener",lv_h:"Live-Prüfung",lv_p:"Ein Bildschirm, drei Tasten. Jede Markierung zeigt per Heatmap das Warum und die Sicherheit in Klartext — nie eine nackte Wahrscheinlichkeit.",
+  lv_latency:"Latenz",lv_through:"Durchsatz",lv_part:"Teil-ID",lv_heat:"Heatmap",lv_confirm:"Ausschuss bestätigen",lv_override:"Übersteuern",lv_call:"Ingenieur rufen",lv_recent:"Letzte Teile",lv_pause:"Pause",lv_resume:"Weiter",lv_pass:"Bestanden",lv_fail:"Abgewiesen",
+  lv_ok:"Teil in Ordnung",lv_oks:"Prüfung bestanden",lv_defect:"Defekt erkannt",lv_sure:"sehr sicher",lv_check:"bitte prüfen",
+  rv_eyebrow:"Prüfliste · Ingenieur",rv_h:"Übersteuerungen & Grenzfälle prüfen",rv_p:"Wo Bediener übersteuert haben oder das Modell unsicher war. Jeder in den Datensatz übernommene Fall macht das nächste Modell besser — das ist der Datenschwungrad.",
+  rv_add:"Zum Datensatz",rv_dismiss:"Verwerfen",rv_empty:"Prüfliste leer — alle Fälle bearbeitet.",rv_opsaid:"Bediener",rv_modelsaid:"Modell",
+  rp_eyebrow:"Berichte · Audit",rp_h:"Schicht- & Tagesberichte",rp_p:"Vollständiges, revisionssicheres Entscheidungsprotokoll — ISO-9001-freundlich. Export als PDF oder CSV.",
+  rp_shift:"Schicht",rp_day:"Tag",rp_week:"Woche",rp_inspected:"Geprüfte Teile",rp_caught:"Defekte erkannt",rp_rate:"98.9% Fangrate",rp_false:"Fehlabweisungen",rp_override:"Übersteuerungsrate",rp_trend:"fällt",
+  rp_log:"Entscheidungsprotokoll",rp_time:"Zeit",rp_partc:"Teil",rp_verdict:"Urteil",rp_conf:"Sicherheit",rp_action:"Disposition",rp_by:"Durch",
+  rp_note:"Dieser Bericht enthält ausschließlich <b>teilebezogene</b> Entscheidungen. Es werden keine Bediener-Leistungsdaten erfasst oder ausgewertet — Betriebsrat-konform.",
+  dv_eyebrow:"Gerätezustand",dv_h:"Edge-Gerät & Kamera",dv_p:"Läuft auch offline weiter. Modellversion, Kamerastatus und Netzwerk auf einen Blick — Updates kommen planbar, nie als Überraschung.",
+  dv_online:"online",dv_temp:"Temperatur",dv_cpu:"Auslastung",dv_uptime:"Laufzeit",dv_stream:"Stream",dv_fps:"Bildrate",dv_expo:"Belichtung",dv_contrast:"Kontrastindex",
+  dv_net:"Netzwerk",dv_offtol:"offline-tolerant",dv_intermit:"instabil",dv_buffer:"Lokaler Puffer",dv_frames:"Bilder",dv_sync:"Letzte Sync",dv_dataloss:"Datenverlust",dv_model:"Bereitgestelltes Modell",dv_deployed:"bereitgestellt vor 2 Tagen",dv_ota:"Update prüfen",
+  t_captured:"Referenzbild aufgenommen",t_boxadded:"Rahmen hinzugefügt · Klasse: ",t_classadded:"Neue Klasse angelegt",t_deployed:"Modell auf Edge EX-1 bereitgestellt",t_reject:"Ausschuss bestätigt · protokolliert",t_override:"Übersteuert → Prüfliste · protokolliert",t_called:"Ingenieur gerufen · Ticket erstellt",t_added:"In Datensatz übernommen · Schwungrad",t_dismissed:"Fall verworfen",t_pdf:"PDF-Bericht wird erzeugt…",t_csv:"CSV exportiert",t_otachk:"Suche nach Updates…",t_otanone:"Aktuell — keine Updates verfügbar",t_persona:"Ansicht: "
+ },
+ en:{edgeOnline:"Edge connected",pEngineer:"Engineer",pOperator:"Operator",grpSetup:"Set up",grpOperate:"Operate",grpMonitor:"Monitor",
+  navOnboarding:"Onboarding",navLabeling:"Dataset & label",navTraining:"Train & validate",navLive:"Live inspection",navReview:"Review queue",navReports:"Reports & audit",navDevice:"Device health",
+  footTitle:"Structural-AI core",footBody:"Powered by the Koch architecture — energy-efficient training, local at the edge.",
+  back:"Back",next:"Next",
+  ob_eyebrow:"Onboarding · guided",ob_h:"Set up camera & line",ob_p:"From camera-on-a-tripod to live inspection — no ML engineer in the room. Goal: first inference in under a day.",
+  ob_s1:"Camera",ob_s2:"Line",ob_s3:"Lighting",ob_s4:"Reference",ob_s5:"Done",
+  ob_c_h:"GigE Vision cameras on the network",ob_c_p:"Standard protocol — no per-camera drivers.",ob_scanning:"scanning…",
+  ob_line_name:"Line name",ob_part:"Part / variant",ob_mode:"Mode at start",ob_shadow:"Shadow mode (parallel, no line control)",ob_active:"Active mode",
+  ob_takt:"Cycle time",ob_edge:"Edge device",ob_bt:"The system inspects <b>parts, never people</b>. No people or performance analytics — works-council safe by design.",
+  ob_calib_h:"Calibrate lighting & contrast",ob_calib_p:"Uneven lighting is the #1 failure source on the line. Drag the slider until the contrast reading sits in the green.",
+  ob_contrast:"Contrast index",ob_good:"good",ob_ref_h:"Capture reference images from the running line",ob_ref_p:"Capture a few good parts. These form the geometric reference field — defects are measured as deviation from it.",
+  ob_captured:"images captured",ob_capture:"Capture",ob_done_h:"Line configured",ob_done_p:"Camera connected, lighting calibrated, reference field built. Continue to the dataset to label defect classes.",
+  lb_eyebrow:"Dataset · label",lb_h:"Label good parts & defect classes",lb_p:"Drag a box around each defect and assign a class. The dataset-health indicator shows whether each class has enough examples.",
+  lb_addbox:"Add box",lb_health:"Dataset health",lb_needmore:"2 classes thin",lb_total:"Total images",lb_unlabeled:"Not yet labeled",
+  lb_tips:"Manage classes",lb_tips_p:"Found a new defect type? Add a class — the reference field stays unchanged, only the deviation is learned.",lb_newclass:"New class",
+  tr_eyebrow:"Train · validate",tr_h:"Train in minutes — not days",tr_p:"One click starts the run. The architecture's efficiency becomes visible: convergence in a few epochs, energy per epoch, utilised re-entry hierarchy.",
+  tr_run:"Training run",tr_idle:"ready · 237 images · 5 classes",tr_start:"Start training",tr_epoch:"Epoch",tr_converge:"Converged after",tr_epochs:"epochs",tr_energy:"Energy / run",tr_perepoch:"measured",tr_time:"Duration",tr_onbox:"on Edge EX-1",
+  tr_val:"Validation — in plain language",tr_holdout:"Holdout · 48 parts",tr_val_p:"No F1 scores — just the two numbers that matter on the line.",tr_catch:"Catch rate",tr_catch_s:"defects detected",tr_false:"False alarms",tr_false_s:"good parts wrongly rejected",
+  tr_thresh:"Decision threshold",tr_deploy:"Deploy to edge",tr_hier:"Re-entry hierarchy",tr_m1:"distinction",tr_m2:"linking",tr_m3:"aggregation",tr_m4:"back-projection",
+  tr_hier_p:"Measured utilisation of the processing paths during the run — the architecture's efficiency thesis as a visible number, not marketing.",tr_vs:"Retrain vs. old process",tr_syntro:"SyntroMind",tr_legacy:"Rule-based / manual",tr_training:"training…",tr_convdone:"Converged — validated",
+  lv_eyebrow:"Live inspection · operator",lv_h:"Live inspection",lv_p:"One screen, three buttons. Every flag shows the heatmap why and confidence in plain terms — never a bare probability.",
+  lv_latency:"Latency",lv_through:"Throughput",lv_part:"Part ID",lv_heat:"Heatmap",lv_confirm:"Confirm reject",lv_override:"Override",lv_call:"Call engineer",lv_recent:"Recent parts",lv_pause:"Pause",lv_resume:"Resume",lv_pass:"Passed",lv_fail:"Rejected",
+  lv_ok:"Part OK",lv_oks:"inspection passed",lv_defect:"Defect detected",lv_sure:"very sure",lv_check:"needs your check",
+  rv_eyebrow:"Review queue · engineer",rv_h:"Review overrides & edge cases",rv_p:"Where operators overrode or the model was uncertain. Every case added to the dataset makes the next model better — that's the data flywheel.",
+  rv_add:"Add to dataset",rv_dismiss:"Dismiss",rv_empty:"Queue clear — every case handled.",rv_opsaid:"Operator",rv_modelsaid:"Model",
+  rp_eyebrow:"Reports · audit",rp_h:"Shift & day reports",rp_p:"Complete, audit-proof decision log — ISO 9001 friendly. Export as PDF or CSV.",
+  rp_shift:"Shift",rp_day:"Day",rp_week:"Week",rp_inspected:"Parts inspected",rp_caught:"Defects caught",rp_rate:"98.9% catch rate",rp_false:"False rejects",rp_override:"Override rate",rp_trend:"falling",
+  rp_log:"Decision log",rp_time:"Time",rp_partc:"Part",rp_verdict:"Verdict",rp_conf:"Confidence",rp_action:"Disposition",rp_by:"By",
+  rp_note:"This report contains <b>part-level</b> decisions only. No operator performance data is collected or analysed — works-council safe.",
+  dv_eyebrow:"Device health",dv_h:"Edge device & camera",dv_p:"Keeps running offline. Model version, camera status and network at a glance — updates arrive predictably, never as a surprise.",
+  dv_online:"online",dv_temp:"Temperature",dv_cpu:"Load",dv_uptime:"Uptime",dv_stream:"Stream",dv_fps:"Frame rate",dv_expo:"Exposure",dv_contrast:"Contrast index",
+  dv_net:"Network",dv_offtol:"offline-tolerant",dv_intermit:"intermittent",dv_buffer:"Local buffer",dv_frames:"frames",dv_sync:"Last sync",dv_dataloss:"Data loss",dv_model:"Deployed model",dv_deployed:"deployed 2 days ago",dv_ota:"Check for update",
+  t_captured:"Reference image captured",t_boxadded:"Box added · class: ",t_classadded:"New class created",t_deployed:"Model deployed to Edge EX-1",t_reject:"Reject confirmed · logged",t_override:"Overridden → review queue · logged",t_called:"Engineer called · ticket created",t_added:"Added to dataset · flywheel",t_dismissed:"Case dismissed",t_pdf:"Generating PDF report…",t_csv:"CSV exported",t_otachk:"Checking for updates…",t_otanone:"Up to date — no updates available",t_persona:"View: "
+ }
+};
+let LANG='de';
+function t(k){return (I18N[LANG][k]!==undefined?I18N[LANG][k]:k)}
+function applyLang(){
+  document.documentElement.lang=LANG;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{el.innerHTML=t(el.dataset.i18n)});
+  document.getElementById('personaLabel').textContent = state.persona==='engineer'?t('pEngineer'):t('pOperator');
+  renderClasses(); renderHealth(); renderReview(); renderLog(); renderFeedLabels();
+  const c=state.live.cur; if(c) renderVerdict(c.fail,c.conf,c.dtype);
+}
+
+/* =========================================================================
+   state
+   ========================================================================= */
+const CLASSES=[
+  {id:'ok',de:'Gut',en:'Good',color:'#37d67a',n:142},
+  {id:'scratch',de:'Kratzer',en:'Scratch',color:'#ff5a6a',n:38},
+  {id:'dent',de:'Delle',en:'Dent',color:'#ffb23e',n:26},
+  {id:'crack',de:'Riss',en:'Crack',color:'#8b7bff',n:12},
+  {id:'contam',de:'Verunreinigung',en:'Contamination',color:'#45ddff',n:19}
+];
+const state={
+  persona:'engineer', screen:'onboarding',
+  session:{pass:0,fail:0,overrides:0,falseRej:0},
+  boxes:0, deployed:false, threshold:0.72, live:{running:false,heat:false,timer:null,part:4212,cur:null},
+};
+
+/* =========================================================================
+   procedural part imagery on canvas (metallic housing + defects)
+   ========================================================================= */
+function drawPart(ctx,w,h,seed,opt={}){
+  opt=Object.assign({defect:false,heat:false,thumb:false,defectType:'scratch'},opt);
+  const rnd=mulberry(seed);
+  // background
+  const bg=ctx.createLinearGradient(0,0,w,h);
+  bg.addColorStop(0,'#0a1016');bg.addColorStop(1,'#05080b');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  // metallic housing body
+  ctx.save();
+  ctx.translate(w*0.5,h*0.5);
+  const R=Math.min(w,h)*0.34;
+  const met=ctx.createLinearGradient(-R,-R,R,R);
+  met.addColorStop(0,'#2a3742');met.addColorStop(.45,'#465866');met.addColorStop(.5,'#5a6f7d');met.addColorStop(.55,'#3d4d59');met.addColorStop(1,'#222c34');
+  ctx.fillStyle=met;
+  roundRectPath(ctx,-R*1.25,-R,R*2.5,R*2,R*0.28);ctx.fill();
+  // brushed texture
+  ctx.globalAlpha=.06;ctx.strokeStyle='#dfeaf2';ctx.lineWidth=1;
+  for(let i=0;i<60;i++){const y=-R+ (i/60)*2*R;ctx.beginPath();ctx.moveTo(-R*1.2,y+rnd()*2);ctx.lineTo(R*1.2,y+rnd()*2);ctx.stroke();}
+  ctx.globalAlpha=1;
+  // bore holes
+  for(const dx of [-R*0.7,0,R*0.7]){
+    ctx.beginPath();ctx.arc(dx,0,R*0.22,0,7);
+    const hg=ctx.createRadialGradient(dx,-R*0.06,2,dx,0,R*0.22);
+    hg.addColorStop(0,'#0b1116');hg.addColorStop(.7,'#1c262e');hg.addColorStop(1,'#3a4a56');
+    ctx.fillStyle=hg;ctx.fill();
+    ctx.lineWidth=Math.max(1,R*0.03);ctx.strokeStyle='#5b7080';ctx.stroke();
+  }
+  // corner bolts
+  for(const s of [[-1,-1],[1,-1],[-1,1],[1,1]]){
+    ctx.beginPath();ctx.arc(s[0]*R*1.05,s[1]*R*0.8,R*0.08,0,7);ctx.fillStyle='#6c828f';ctx.fill();
+  }
+  // defect
+  let defPos=null;
+  if(opt.defect){
+    const ang=rnd()*6.28, dist=R*0.55;
+    defPos={x:Math.cos(ang)*dist, y:Math.sin(ang)*dist*0.6};
+    ctx.save();ctx.translate(defPos.x,defPos.y);
+    if(opt.defectType==='scratch'){
+      ctx.rotate(rnd()*3);ctx.strokeStyle='#c9d6de';ctx.lineWidth=2.2;ctx.globalAlpha=.9;
+      ctx.beginPath();ctx.moveTo(-R*0.28,0);ctx.bezierCurveTo(-R*0.1,-6,R*0.05,5,R*0.28,-2);ctx.stroke();
+      ctx.strokeStyle='#0a0f13';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-R*0.28,2);ctx.lineTo(R*0.28,0);ctx.stroke();
+    }else if(opt.defectType==='dent'){
+      const dg=ctx.createRadialGradient(-3,-3,1,0,0,R*0.2);dg.addColorStop(0,'#8ea3b0');dg.addColorStop(.6,'#38454f');dg.addColorStop(1,'rgba(40,50,58,0)');
+      ctx.fillStyle=dg;ctx.beginPath();ctx.arc(0,0,R*0.2,0,7);ctx.fill();
+    }else if(opt.defectType==='crack'){
+      ctx.strokeStyle='#05090c';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-R*0.22);
+      let cx=0,cy=-R*0.22;for(let i=0;i<6;i++){cx+=(rnd()-.5)*R*0.16;cy+=R*0.075;ctx.lineTo(cx,cy);}ctx.stroke();
+    }else{
+      ctx.fillStyle='rgba(180,140,90,.55)';for(let i=0;i<9;i++){ctx.beginPath();ctx.arc((rnd()-.5)*R*0.4,(rnd()-.5)*R*0.4,rnd()*4+1,0,7);ctx.fill();}
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+  // heatmap overlay (why)
+  if(opt.heat && defPos){
+    const hx=w*0.5+defPos.x, hy=h*0.5+defPos.y;
+    const hg=ctx.createRadialGradient(hx,hy,2,hx,hy,Math.min(w,h)*0.26);
+    hg.addColorStop(0,'rgba(255,40,60,.72)');hg.addColorStop(.35,'rgba(255,120,40,.42)');hg.addColorStop(.7,'rgba(255,210,40,.16)');hg.addColorStop(1,'rgba(255,210,40,0)');
+    ctx.fillStyle=hg;ctx.fillRect(0,0,w,h);
+    if(!opt.thumb){ctx.strokeStyle='rgba(255,90,106,.9)';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      ctx.strokeRect(hx-34,hy-26,68,52);ctx.setLineDash([]);}
+  }
+  // vignette
+  const vg=ctx.createRadialGradient(w/2,h/2,Math.min(w,h)*0.3,w/2,h/2,Math.max(w,h)*0.7);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,w,h);
+  return defPos;
+}
+function roundRectPath(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* =========================================================================
+   navigation
+   ========================================================================= */
+function go(screen){
+  state.screen=screen;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.dataset.screen===screen));
+  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('on',n.dataset.screen===screen));
+  document.getElementById('main').scrollTop=0;
+  if(screen==='labeling') initLabeling();
+  if(screen==='live') startLive(); else stopLive();
+  if(screen==='training') drawLoss(trainState.epoch);
+}
+document.querySelectorAll('.nav').forEach(n=>n.addEventListener('click',()=>go(n.dataset.screen)));
+
+/* persona */
+const app=document.getElementById('app');
+document.getElementById('personaBtn').addEventListener('click',()=>{
+  const eng = state.persona==='engineer';
+  state.persona = eng?'operator':'engineer';
+  app.classList.toggle('operator',state.persona==='operator');
+  const btn=document.getElementById('personaBtn');
+  btn.classList.toggle('op',state.persona==='operator');
+  document.getElementById('whoAvatar').textContent = state.persona==='operator'?'B':'M';
+  document.getElementById('personaLabel').textContent = state.persona==='engineer'?t('pEngineer'):t('pOperator');
+  toast(t('t_persona')+(state.persona==='engineer'?t('pEngineer'):t('pOperator')),'brand','info');
+  if(state.persona==='operator') go('live');
+});
+
+/* language */
+document.querySelectorAll('.seg [data-lang]').forEach(b=>b.addEventListener('click',()=>{
+  LANG=b.dataset.lang;
+  document.querySelectorAll('.seg [data-lang]').forEach(x=>x.classList.toggle('on',x===b));
+  applyLang();
+}));
+
+/* =========================================================================
+   toast
+   ========================================================================= */
+function toast(msg,cls='pass',icon='check'){
+  const wrap=document.getElementById('toasts');
+  const el=document.createElement('div');
+  el.className='toast '+cls;
+  el.innerHTML=`<span class="ic">${svg(icon)}</span><span>${msg}</span>`;
+  wrap.appendChild(el);
+  setTimeout(()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300)},2600);
+}
+
+/* =========================================================================
+   1. onboarding wizard
+   ========================================================================= */
+const CAMS=[
+  {name:'Basler acA2440-75gc',ip:'192.168.10.24',mp:'5.0 MP'},
+  {name:'Basler acA1920-40gc',ip:'192.168.10.31',mp:'2.3 MP'},
+  {name:'FLIR Blackfly S BFS-PGE',ip:'192.168.10.47',mp:'3.2 MP'}
+];
+let wizStep=0, selCam=0, refCaptured=0;
+function renderCams(){
+  const list=document.getElementById('camList');list.innerHTML='';
+  CAMS.forEach((c,i)=>{
+    const el=document.createElement('div');
+    el.className='cam'+(i===selCam?' sel':'');
+    el.innerHTML=`<div class="camic">${svg('camera')}</div>
+      <div><b style="font-size:13.5px">${c.name}</b><div class="muted mono" style="font-size:11.5px">${c.ip} · GigE · ${c.mp}</div></div>
+      <div class="radio"></div>`;
+    el.addEventListener('click',()=>{selCam=i;renderCams()});
+    list.appendChild(el);
+  });
+}
+setTimeout(()=>{const s=document.getElementById('camScan');if(s)s.innerHTML=`<span class="tag pass"><span class="ic">${svg('check')}</span>3 gefunden</span>`;},1400);
+renderCams();
+function setWiz(n){
+  wizStep=Math.max(0,Math.min(4,n));
+  document.querySelectorAll('#stepper .step').forEach((s,i)=>{
+    s.classList.toggle('cur',i===wizStep);s.classList.toggle('done',i<wizStep);
+  });
+  document.querySelectorAll('.wizpane').forEach(p=>p.classList.toggle('on',+p.dataset.pane===wizStep));
+  document.getElementById('wizBack').disabled=wizStep===0;
+  document.getElementById('wizProg').textContent=(wizStep+1)+' / 5';
+  const nx=document.getElementById('wizNext');
+  nx.querySelector('[data-i18n]').textContent = wizStep===4 ? (LANG==='de'?'Zum Datensatz':'To dataset') : t('next');
+}
+document.getElementById('wizNext').addEventListener('click',()=>{
+  if(wizStep===4){go('labeling');return;}
+  setWiz(wizStep+1);
+});
+document.getElementById('wizBack').addEventListener('click',()=>setWiz(wizStep-1));
+// calibration
+const calibRange=document.getElementById('calibRange');
+calibRange.addEventListener('input',()=>{
+  const v=+calibRange.value;
+  document.getElementById('calibNeedle').style.left=v+'%';
+  const idx=(0.45+v/100*0.55).toFixed(2);
+  document.getElementById('calibVal').textContent=idx;
+  const st=document.getElementById('calibState');
+  if(v>=60) st.innerHTML=`<span class="tag pass"><span class="ic">${svg('check')}</span>${t('ob_good')}</span>`;
+  else if(v>=35) st.innerHTML=`<span class="tag warn"><span class="ic">${svg('alert')}</span>${LANG==='de'?'grenzwertig':'marginal'}</span>`;
+  else st.innerHTML=`<span class="tag fail"><span class="ic">${svg('alert')}</span>${LANG==='de'?'zu dunkel':'too dark'}</span>`;
+});
+// reference capture
+document.getElementById('captureBtn').addEventListener('click',()=>{
+  if(refCaptured>=12)return;
+  refCaptured++;
+  document.getElementById('refCount').textContent=refCaptured;
+  const th=document.createElement('div');th.className='thumb';
+  const cv=document.createElement('canvas');cv.width=140;cv.height=140;
+  drawPart(cv.getContext('2d'),140,140,1000+refCaptured,{thumb:true});
+  th.appendChild(cv);
+  th.innerHTML+=`<div class="mk ok">${svg('check')}</div>`;
+  document.getElementById('refThumbs').appendChild(th);
+  toast(t('t_captured'),'pass','camera');
+});
+
+/* =========================================================================
+   2. labeling
+   ========================================================================= */
+let labelInit=false, curLabel=3, labelBoxes=[[0.52,0.42,0.16,0.12]];
+function renderClasses(){
+  const wrap=document.getElementById('classChips');if(!wrap)return;wrap.innerHTML='';
+  CLASSES.forEach((c,i)=>{
+    const el=document.createElement('button');el.className='chip';
+    if(i===curLabel)el.style.borderColor=c.color;
+    el.innerHTML=`<span class="sw" style="background:${c.color}"></span>${LANG==='de'?c.de:c.en}`;
+    el.addEventListener('click',()=>{curLabel=i;renderClasses();drawLabel();});
+    wrap.appendChild(el);
+  });
+}
+function renderHealth(){
+  const wrap=document.getElementById('healthRows');if(!wrap)return;wrap.innerHTML='';
+  const max=Math.max(...CLASSES.map(c=>c.n));
+  CLASSES.forEach(c=>{
+    const thin=c.n<20;
+    const row=document.createElement('div');row.className='hrow';
+    row.innerHTML=`<div class="name"><span class="sw" style="width:9px;height:9px;border-radius:3px;background:${c.color}"></span>${LANG==='de'?c.de:c.en}</div>
+      <div class="bar"><i style="width:${Math.round(c.n/max*100)}%;background:${thin?'var(--warn)':c.color}"></i></div>
+      <div class="num">${c.n}</div>`;
+    wrap.appendChild(row);
+  });
+}
+function drawLabel(){
+  const cv=document.getElementById('labelCanvas');const ctx=cv.getContext('2d');
+  drawPart(ctx,cv.width,cv.height,777,{defect:true,defectType:'scratch'});
+  labelBoxes.forEach(b=>{
+    const c=CLASSES[curLabel];
+    const x=b[0]*cv.width-b[2]*cv.width/2, y=b[1]*cv.height-b[3]*cv.height/2, w=b[2]*cv.width, h=b[3]*cv.height;
+    ctx.strokeStyle=c.color;ctx.lineWidth=3;ctx.strokeRect(x,y,w,h);
+    ctx.fillStyle=c.color;const label=(LANG==='de'?c.de:c.en);
+    ctx.font='600 15px system-ui';const tw=ctx.measureText(label).width;
+    ctx.fillRect(x,y-24,tw+16,24);ctx.fillStyle='#04150e';ctx.fillText(label,x+8,y-7);
+  });
+}
+function initLabeling(){
+  renderClasses();renderHealth();drawLabel();
+  if(labelInit)return;labelInit=true;
+  const tw=document.getElementById('labelThumbs');
+  for(let i=0;i<8;i++){
+    const th=document.createElement('div');th.className='thumb'+(i===0?' sel':'');
+    const cv=document.createElement('canvas');cv.width=120;cv.height=120;
+    const def=i%3!==0;
+    drawPart(cv.getContext('2d'),120,120,200+i,{thumb:true,defect:def,defectType:['scratch','dent','crack','contam'][i%4]});
+    th.appendChild(cv);
+    th.innerHTML+=`<div class="mk ${def?'def':'ok'}">${svg(def?'alert':'check')}</div>`;
+    th.addEventListener('click',()=>{document.querySelectorAll('#labelThumbs .thumb').forEach(x=>x.classList.remove('sel'));th.classList.add('sel');drawLabel();});
+    tw.appendChild(th);
+  }
+}
+document.getElementById('addBoxBtn').addEventListener('click',()=>{
+  labelBoxes.push([0.3+Math.random()*0.4,0.3+Math.random()*0.35,0.12+Math.random()*0.08,0.1+Math.random()*0.06]);
+  CLASSES[curLabel].n++;drawLabel();renderHealth();
+  document.getElementById('lbUnlab').textContent=Math.max(0,+document.getElementById('lbUnlab').textContent-1);
+  toast(t('t_boxadded')+(LANG==='de'?CLASSES[curLabel].de:CLASSES[curLabel].en),'pass','plus');
+});
+document.getElementById('newClassBtn').addEventListener('click',()=>{
+  const names=[['Grat','Burr'],['Lunker','Void'],['Farbfehler','Color fault']];
+  const nm=names[(CLASSES.length-5+names.length)%names.length];
+  const colors=['#ff9b76','#63e8d1','#ffd991'];
+  CLASSES.push({id:'c'+CLASSES.length,de:nm[0],en:nm[1],color:colors[(CLASSES.length)%3],n:3});
+  renderClasses();renderHealth();
+  toast(t('t_classadded'),'pass','plus');
+});
+
+/* =========================================================================
+   3. training
+   ========================================================================= */
+const trainState={running:false,epoch:0,loss:[],done:false};
+const LOSS=[1.92,1.31,0.86,0.57,0.39,0.28,0.22,0.185,0.17,0.163]; // converges ~epoch 9
+function drawLoss(uptoEpoch){
+  const cv=document.getElementById('lossCanvas');const ctx=cv.getContext('2d');const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle='rgba(255,255,255,.05)';ctx.lineWidth=1;
+  for(let i=1;i<5;i++){const y=H/5*i;ctx.beginPath();ctx.moveTo(30,y);ctx.lineTo(W-10,y);ctx.stroke();}
+  const n=LOSS.length, x0=30,x1=W-14,y0=H-24,y1=18,maxL=2;
+  const X=i=>x0+(x1-x0)*(i/(n-1)), Y=v=>y1+(y0-y1)*(1-v/maxL);
+  // area
+  ctx.beginPath();ctx.moveTo(X(0),y0);
+  for(let i=0;i<=uptoEpoch&&i<n;i++)ctx.lineTo(X(i),Y(LOSS[i]));
+  ctx.lineTo(X(Math.min(uptoEpoch,n-1)),y0);ctx.closePath();
+  const ag=ctx.createLinearGradient(0,y1,0,y0);ag.addColorStop(0,'rgba(47,224,168,.28)');ag.addColorStop(1,'rgba(47,224,168,0)');
+  ctx.fillStyle=ag;ctx.fill();
+  // line
+  ctx.beginPath();for(let i=0;i<=uptoEpoch&&i<n;i++){const fx=X(i),fy=Y(LOSS[i]);i===0?ctx.moveTo(fx,fy):ctx.lineTo(fx,fy);}
+  ctx.strokeStyle='#2fe0a8';ctx.lineWidth=2.5;ctx.stroke();
+  // endpoint
+  if(uptoEpoch>=0&&uptoEpoch<n){const ex=X(Math.min(uptoEpoch,n-1)),ey=Y(LOSS[Math.min(uptoEpoch,n-1)]);
+    ctx.fillStyle='#2fe0a8';ctx.beginPath();ctx.arc(ex,ey,4.5,0,7);ctx.fill();
+    ctx.fillStyle='rgba(47,224,168,.25)';ctx.beginPath();ctx.arc(ex,ey,9,0,7);ctx.fill();}
+}
+const HIER_TARGET=[92,78,64,71];
+function setHier(frac){
+  document.querySelectorAll('#hier .h').forEach((h,i)=>{
+    const val=Math.round(HIER_TARGET[i]*frac);
+    h.querySelector('.bar>i').style.width=val+'%';h.querySelector('.pc').textContent=val+'%';
+  });
+}
+function startTraining(){
+  if(trainState.running)return;
+  trainState.running=true;trainState.done=false;
+  const btn=document.getElementById('trainBtn');btn.disabled=true;
+  document.getElementById('trStatus').textContent=t('tr_training');
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const total=LOSS.length, dur=reduce?200:2600, per=dur/total;
+  let e=0, energy=0, t0=performance.now();
+  const step=()=>{
+    e++;
+    document.getElementById('ovEpoch').textContent=e;
+    document.getElementById('ovLoss').textContent=LOSS[e-1].toFixed(3);
+    energy+=4.2+Math.random()*1.4;
+    document.getElementById('mEnergy').textContent=Math.round(energy);
+    document.getElementById('mConverge').textContent=e;
+    document.getElementById('mTime').textContent=(e*0.78).toFixed(1)+' min';
+    drawLoss(e-1);setHier(e/total);
+    if(e<total){setTimeout(step,per);}else{finishTraining(energy);}
+  };
+  step();
+}
+function finishTraining(energy){
+  trainState.running=false;trainState.done=true;
+  const btn=document.getElementById('trainBtn');btn.disabled=false;
+  btn.innerHTML=`<span class="ic">${svg('play')}</span>${LANG==='de'?'Erneut trainieren':'Retrain'}`;
+  document.getElementById('trStatus').textContent=t('tr_convdone');
+  document.getElementById('mConverge').textContent='9';
+  document.getElementById('mCatch').textContent='99.1%';
+  document.getElementById('mFalse').textContent='2.1%';
+  const val=document.getElementById('valCard');val.style.opacity='1';
+  const tr=document.getElementById('threshRange');tr.disabled=false;
+  document.getElementById('deployBtn').disabled=false;
+  toast(LANG==='de'?'Training konvergiert in 9 Epochen · '+Math.round(energy)+' Wh':'Converged in 9 epochs · '+Math.round(energy)+' Wh','brand','rocket');
+  val.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+document.getElementById('trainBtn').addEventListener('click',startTraining);
+// threshold tradeoff
+document.getElementById('threshRange').addEventListener('input',e=>{
+  const v=+e.target.value/100; state.threshold=v;
+  document.getElementById('threshVal').textContent=v.toFixed(2);
+  // higher threshold -> fewer false alarms but lower catch
+  const catchR=(100-(v-0.4)*(v-0.4)*120-1).toFixed(1);
+  const falseR=Math.max(0.3,(6.5-(v)*6)).toFixed(1);
+  document.getElementById('tvCatch').textContent=catchR+'%';
+  document.getElementById('tvFalse').textContent=falseR+'%';
+  document.getElementById('mCatch').textContent=catchR+'%';
+  document.getElementById('mFalse').textContent=falseR+'%';
+});
+document.getElementById('deployBtn').addEventListener('click',()=>{
+  state.deployed=true;
+  document.getElementById('dvVersion').textContent='brain-vision-gh2247 · v0.9.4';
+  toast(t('t_deployed'),'pass','rocket');
+  setTimeout(()=>go('live'),700);
+});
+drawLoss(-1);
+
+/* =========================================================================
+   4. live inspection
+   ========================================================================= */
+function renderVerdict(fail,conf,dtype){
+  const v=document.getElementById('verdict');
+  v.className='verdict '+(fail?'fail':'pass');
+  v.querySelector('.vic').innerHTML=svg(fail?'alert':'check');
+  document.getElementById('verdictText').textContent=fail?t('lv_defect'):t('lv_ok');
+  const dname=fail?(LANG==='de'?CLASSES.find(c=>c.id==={scratch:'scratch',dent:'dent',crack:'crack',contam:'contam'}[dtype])?.de:'')||'':'';
+  document.getElementById('verdictSub').textContent = fail ? ('GH-2247 · '+defectName(dtype)) : ('GH-2247 · '+t('lv_oks'));
+  document.getElementById('confText').textContent = conf>0.9?t('lv_sure'):t('lv_check');
+  document.getElementById('confPct').textContent=(conf*100).toFixed(1)+'%';
+}
+function defectName(dt){const m={scratch:1,dent:2,crack:3,contam:4};const c=CLASSES[m[dt]];return c?(LANG==='de'?c.de:c.en):dt;}
+function newPart(){
+  state.live.part++;
+  const fail=Math.random()<0.24;
+  const dtype=['scratch','dent','crack','contam'][Math.floor(Math.random()*4)];
+  const conf=fail?(0.82+Math.random()*0.17):(0.95+Math.random()*0.049);
+  state.live.cur={fail,dtype,conf,id:state.live.part};
+  const cv=document.getElementById('liveCanvas');
+  drawPart(cv.getContext('2d'),cv.width,cv.height,state.live.part*7,{defect:fail,defectType:dtype,heat:state.live.heat&&fail});
+  renderVerdict(fail,conf,dtype);
+  document.getElementById('latVal').textContent=(21+Math.floor(Math.random()*11))+' ms';
+  document.getElementById('partVal').textContent='#'+String(state.live.part).padStart(6,'0');
+  if(fail)state.session.fail++;else state.session.pass++;
+  updateLiveKpis();
+  addFeed(fail,conf,state.live.part,dtype);
+}
+function updateLiveKpis(){
+  document.getElementById('kPass').textContent=state.session.pass;
+  document.getElementById('kFail').textContent=state.session.fail;
+  const tot=state.session.pass+state.session.fail;
+  document.getElementById('thruVal').textContent=(24+Math.floor(Math.random()*4))+' /min';
+}
+function addFeed(fail,conf,id,dtype){
+  const feed=document.getElementById('liveFeed');
+  const el=document.createElement('div');el.className='feeditem '+(fail?'fail':'pass');
+  el.innerHTML=`<div class="fic">${svg(fail?'alert':'check')}</div>
+    <div class="ft"><b>${fail?defectName(dtype):t('lv_ok')}</b><span>#${String(id).padStart(6,'0')}</span></div>
+    <div class="fc">${(conf*100).toFixed(0)}%</div>`;
+  feed.insertBefore(el,feed.firstChild);
+  while(feed.children.length>9)feed.removeChild(feed.lastChild);
+}
+function renderFeedLabels(){/* labels rebuilt on next tick; static ok */}
+function startLive(){
+  if(state.live.running)return;state.live.running=true;
+  newPart();
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  state.live.timer=setInterval(newPart, reduce?4000:2400);
+}
+function stopLive(){if(state.live.timer){clearInterval(state.live.timer);state.live.timer=null;}state.live.running=false;}
+document.getElementById('heatBtn').addEventListener('click',()=>{
+  state.live.heat=!state.live.heat;
+  document.getElementById('heatBtn').classList.toggle('primary',state.live.heat);
+  const c=state.live.cur;if(c){const cv=document.getElementById('liveCanvas');
+    drawPart(cv.getContext('2d'),cv.width,cv.height,c.id*7,{defect:c.fail,defectType:c.dtype,heat:state.live.heat&&c.fail});}
+});
+document.getElementById('pauseBtn').addEventListener('click',function(){
+  if(state.live.timer){stopLive();this.querySelector('[data-i18n]').textContent=t('lv_resume');this.querySelector('.ic').innerHTML=svg('play');}
+  else{startLive();this.querySelector('[data-i18n]').textContent=t('lv_pause');this.querySelector('.ic').innerHTML=svg('pause');}
+});
+document.getElementById('btnReject').addEventListener('click',()=>{toast(t('t_reject'),'pass','reject');pushLog('reject');});
+document.getElementById('btnOverride').addEventListener('click',()=>{
+  state.session.overrides++;addReviewFromLive();toast(t('t_override'),'warn','override');pushLog('override');updateReviewBadge();
+});
+document.getElementById('btnCall').addEventListener('click',()=>{toast(t('t_called'),'info','call');});
+
+/* =========================================================================
+   5. review queue
+   ========================================================================= */
+let review=[
+  {id:4188,model:'crack',mv:true,op:false,conf:0.61},
+  {id:4193,model:'ok',mv:false,op:true,conf:0.58,dtype:'scratch'},
+  {id:4201,model:'contam',mv:true,op:true,conf:0.55},
+  {id:4207,model:'dent',mv:true,op:false,conf:0.64}
+];
+function addReviewFromLive(){
+  const c=state.live.cur;if(!c)return;
+  review.unshift({id:c.id,model:c.fail?c.dtype:'ok',mv:c.fail,op:!c.fail,conf:c.conf,dtype:c.dtype});
+  if(state.screen==='review')renderReview();
+}
+function updateReviewBadge(){
+  const b=document.getElementById('revBadge');b.textContent=review.length;b.style.display=review.length?'grid':'none';
+}
+function renderReview(){
+  const grid=document.getElementById('revGrid');if(!grid)return;grid.innerHTML='';
+  if(!review.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="ic">${svg('check')}</div><b>${t('rv_empty')}</b></div>`;updateReviewBadge();return;}
+  review.forEach((r,idx)=>{
+    const modelFail=r.mv;
+    const el=document.createElement('div');el.className='rev';
+    const cvId='rc'+r.id;
+    el.innerHTML=`<div class="img"><canvas id="${cvId}" width="320" height="200"></canvas>
+      <div class="ov"><span class="tag ${modelFail?'fail':'pass'}"><span class="ic">${svg(modelFail?'alert':'check')}</span>${modelFail?defectName(r.dtype||r.model):t('lv_ok')}</span>
+      <span class="tag info"><span class="ic">${svg('info')}</span>${(r.conf*100).toFixed(0)}%</span></div></div>
+      <div class="body">
+        <div class="disp"><span class="mono">#${String(r.id).padStart(6,'0')}</span><span class="arrow">·</span>
+          <span>${t('rv_modelsaid')}: <b>${modelFail?defectName(r.dtype||r.model):t('lv_ok')}</b></span>
+          <span class="arrow">→</span><span>${t('rv_opsaid')}: <b>${r.op?t('lv_defect'):t('lv_ok')}</b></span></div>
+        <div class="acts"><button class="btn sm primary" data-add="${idx}"><span class="ic">${svg('plus')}</span>${t('rv_add')}</button>
+        <button class="btn sm" data-dismiss="${idx}">${t('rv_dismiss')}</button></div>
+      </div>`;
+    grid.appendChild(el);
+    const cv=document.getElementById(cvId);
+    drawPart(cv.getContext('2d'),320,200,r.id*7,{defect:modelFail,defectType:r.dtype||r.model,heat:true,thumb:true});
+  });
+  grid.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{
+    const i=+b.dataset.add;const r=review[i];
+    const m={scratch:1,dent:2,crack:3,contam:4};const ci=m[r.dtype||r.model]||1;CLASSES[ci].n++;
+    review.splice(i,1);renderReview();renderHealth();toast(t('t_added'),'pass','plus');
+  }));
+  grid.querySelectorAll('[data-dismiss]').forEach(b=>b.addEventListener('click',()=>{
+    review.splice(+b.dataset.dismiss,1);renderReview();toast(t('t_dismissed'),'info','info');
+  }));
+  updateReviewBadge();
+}
+
+/* =========================================================================
+   6. reports / log
+   ========================================================================= */
+let logRows=[
+  {t:'14:02:11',part:'#004207',v:'fail',vt:'dent',conf:0.93,act:'reject',by:'auto'},
+  {t:'14:02:08',part:'#004206',v:'pass',conf:0.99,act:'pass',by:'auto'},
+  {t:'14:01:59',part:'#004205',v:'fail',vt:'scratch',conf:0.71,act:'override',by:'op'},
+  {t:'14:01:52',part:'#004204',v:'pass',conf:0.98,act:'pass',by:'auto'},
+  {t:'14:01:45',part:'#004203',v:'pass',conf:0.97,act:'pass',by:'auto'},
+  {t:'14:01:38',part:'#004202',v:'fail',vt:'crack',conf:0.88,act:'reject',by:'auto'}
+];
+function pushLog(action){
+  const c=state.live.cur;if(!c)return;
+  const now=new Date();const ts=now.toTimeString().slice(0,8);
+  logRows.unshift({t:ts,part:'#'+String(c.id).padStart(6,'0'),v:c.fail?'fail':'pass',vt:c.dtype,conf:c.conf,
+    act:action==='reject'?'reject':(action==='override'?'override':'pass'),by:'op'});
+  if(state.screen==='reports')renderLog();
+}
+function renderLog(){
+  const b=document.getElementById('logBody');if(!b)return;b.innerHTML='';
+  const actMap={reject:[LANG==='de'?'Ausschuss':'Reject','fail'],pass:[LANG==='de'?'freigegeben':'passed','pass'],override:[LANG==='de'?'übersteuert':'override','warn']};
+  logRows.slice(0,14).forEach(r=>{
+    const a=actMap[r.act]||actMap.pass;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="mono">${r.t}</td><td class="mono">${r.part}</td>
+      <td><span class="tag ${r.v}"><span class="ic">${svg(r.v==='fail'?'alert':'check')}</span>${r.v==='fail'?defectName(r.vt):t('lv_ok')}</span></td>
+      <td class="mono">${(r.conf*100).toFixed(0)}%</td>
+      <td><span class="tag ${a[1]}">${a[0]}</span></td>
+      <td class="muted">${r.by==='op'?(LANG==='de'?'Bediener':'Operator'):'Auto'}</td>`;
+    b.appendChild(tr);
+  });
+}
+document.getElementById('pdfBtn').addEventListener('click',()=>toast(t('t_pdf'),'brand','pdf'));
+document.getElementById('csvBtn').addEventListener('click',()=>toast(t('t_csv'),'pass','csv'));
+document.querySelectorAll('[data-screen="reports"] .seg button').forEach(b=>b.addEventListener('click',function(){
+  this.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===this));
+  const mult=this.textContent===t('rp_day')||this.textContent==='Tag'||this.textContent==='Day'?7:(this.textContent==='Woche'||this.textContent==='Week'?34:1);
+  document.getElementById('rInspected').textContent=(1284*mult).toLocaleString('de-DE');
+  document.getElementById('rCaught').textContent=31*mult;
+  document.getElementById('rFalse').textContent=7*mult;
+}));
+
+/* =========================================================================
+   7. device / OTA
+   ========================================================================= */
+document.getElementById('otaBtn').addEventListener('click',()=>{
+  toast(t('t_otachk'),'info','download');
+  const bar=document.getElementById('otaBar');bar.style.display='block';const i=bar.querySelector('i');i.style.width='0%';
+  let p=0;const iv=setInterval(()=>{p+=12+Math.random()*14;if(p>=100){p=100;clearInterval(iv);setTimeout(()=>{bar.style.display='none';toast(t('t_otanone'),'pass','check');},500);}i.style.width=Math.min(100,p)+'%';},180);
+});
+
+/* =========================================================================
+   init
+   ========================================================================= */
+setWiz(0);
+renderReview();updateReviewBadge();renderLog();renderClasses();renderHealth();
+applyLang();
+</script>
+</body>
+</html>
